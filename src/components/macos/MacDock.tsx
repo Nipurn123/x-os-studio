@@ -1,0 +1,136 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  FolderCode,
+  Zap,
+  Cpu,
+  Terminal,
+  FileText,
+  Layers,
+} from "lucide-react";
+
+interface DockProps {
+  activeTab: string;
+  onSelectTab: (tab: string) => void;
+  theme?: "dark" | "light";
+}
+
+export default function MacDock({ activeTab, onSelectTab, theme = "light" }: DockProps) {
+  const [hoveredApp, setHoveredApp] = useState<string | null>(null);
+  const isDark = theme === "dark";
+
+  const apps = [
+    {
+      id: "decompiler",
+      name: "Finder Decompiler",
+      badge: "2,015 Files",
+      color: "from-blue-500 to-indigo-600",
+      icon: <FolderCode className="h-6 w-6 text-white" />,
+    },
+    {
+      id: "diagrams",
+      name: "Architecture Diagrams",
+      badge: "4 Visual Flows",
+      color: "from-purple-500 to-pink-600",
+      icon: <Layers className="h-6 w-6 text-white" />,
+    },
+    {
+      id: "doctor",
+      name: "Tweet Growth Doctor",
+      badge: "Live Scorer",
+      color: "from-amber-400 to-orange-500",
+      icon: <Zap className="h-6 w-6 text-white" />,
+    },
+    {
+      id: "matrix",
+      name: "Weights Matrix",
+      badge: "Cheat Sheet",
+      color: "from-emerald-400 to-teal-600",
+      icon: <Cpu className="h-6 w-6 text-white" />,
+    },
+    {
+      id: "terminal",
+      name: "Terminal CLI",
+      badge: "zsh shell",
+      color: "from-slate-700 to-slate-900",
+      icon: <Terminal className="h-6 w-6 text-white" />,
+    },
+    {
+      id: "readme",
+      name: "Architecture README",
+      badge: "Whitepaper",
+      color: "from-cyan-500 to-blue-600",
+      icon: <FileText className="h-6 w-6 text-white" />,
+    },
+  ];
+
+  return (
+    <div className="relative z-40 flex items-center justify-center select-none pb-3">
+      <div
+        className={`flex items-end gap-3 rounded-2xl px-4 py-2.5 backdrop-blur-2xl shadow-2xl transition-colors ${
+          isDark
+            ? "border border-white/[0.15] bg-black/40"
+            : "border border-black/[0.1] bg-white/70 shadow-lg"
+        }`}
+      >
+        {apps.map((app) => {
+          const isActive = activeTab === app.id;
+          const isHovered = hoveredApp === app.id;
+
+          return (
+            <div
+              key={app.id}
+              className="relative flex flex-col items-center group cursor-pointer"
+              onMouseEnter={() => setHoveredApp(app.id)}
+              onMouseLeave={() => setHoveredApp(null)}
+              onClick={() => onSelectTab(app.id)}
+            >
+              {/* Tooltip on Hover */}
+              {isHovered && (
+                <div className="absolute -top-10 flex flex-col items-center animate-in fade-in zoom-in-95 duration-150">
+                  <div
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-sans font-semibold shadow-lg backdrop-blur-md whitespace-nowrap ${
+                      isDark
+                        ? "border border-white/10 bg-black/80 text-white"
+                        : "border border-black/10 bg-white/90 text-black shadow-md"
+                    }`}
+                  >
+                    {app.name}
+                  </div>
+                  <div
+                    className={`h-1 w-1 rotate-45 border-r border-b ${
+                      isDark
+                        ? "bg-black/80 border-white/10"
+                        : "bg-white/90 border-black/10"
+                    }`}
+                  />
+                </div>
+              )}
+
+              {/* App Icon Tile */}
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${
+                  app.color
+                } shadow-md transition-all duration-200 group-hover:scale-120 group-hover:-translate-y-2 group-active:scale-95 border border-white/20`}
+              >
+                {app.icon}
+              </div>
+
+              {/* Active Indicator LED Dot */}
+              <div className="mt-1 h-1 w-1 rounded-full transition-all">
+                {isActive && (
+                  <div
+                    className={`h-1 w-1 rounded-full scale-125 ${
+                      isDark ? "bg-white shadow-glow-blue" : "bg-black"
+                    }`}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

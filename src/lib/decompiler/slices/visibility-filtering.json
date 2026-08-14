@@ -1,0 +1,492 @@
+[
+  {
+    "path": "visibility-filtering-client/discovery.rs",
+    "inSimpleTerms": "This module resolves and monitors dynamic network endpoints for Visibility Filtering backend instances across Twitter/X data centers. It integrates with internal service discovery mechanisms to maintain an active pool of live gRPC upstream servers.",
+    "whyThisExists": "Hardcoding server addresses in distributed infrastructure leads to cascading outages during node failovers or deployments; this dynamic discovery client continuously updates connection endpoints without requiring caller restarts.",
+    "howItAffectsYourReach": "Does not score posts directly, but network disconnects or lookup failures trigger safety fallback modes that can degrade or restrict recommendation generation across high-load feeds.",
+    "theGoldenRule": "Reliable upstream service discovery ensures safety checks run with sub-millisecond network overhead, preventing candidate drop fallbacks."
+  },
+  {
+    "path": "visibility-filtering-client/graphql_results.rs",
+    "inSimpleTerms": "This file maps low-level visibility filtering verdicts into standard GraphQL schema responses. It transforms binary Drop or Interstitial verdicts into user-facing presentation states and warning metadata for web and mobile apps.",
+    "whyThisExists": "Client frontend applications (iOS, Android, Web) require structured GraphQL response objects to render appropriate warning interstitials, age gates, or tombstone placeholders instead of raw gRPC byte enums.",
+    "howItAffectsYourReach": "Dictates whether your post appears seamlessly in the timeline or behind a high-friction interstitial screen (such as NSFW or sensitive warnings) that severely reduces click-through and impression rates.",
+    "theGoldenRule": "Avoid triggering soft-filter labels that convert standard rendering into GraphQL warning wrappers, as friction warnings slash organic post engagement by over 80%."
+  },
+  {
+    "path": "visibility-filtering-client/lib.rs",
+    "inSimpleTerms": "This is the root library declaration file for the Visibility Filtering Rust client crate. It exposes models, connection helpers, label encoders, and the main client interface to consuming services across X.",
+    "whyThisExists": "Provides a clean, modular API surface so downstream services (such as Home Mixer, Search, and User Profile services) can integrate visibility filtering via a standardized Rust library.",
+    "howItAffectsYourReach": "Serves as the gateway crate through which all recommendation engines and search indexes query the safety and moderation status of candidates.",
+    "theGoldenRule": "Standardized client integration ensures consistent enforcement of platform rules across every product surface on X."
+  },
+  {
+    "path": "visibility-filtering-client/links.rs",
+    "inSimpleTerms": "This file defines data structures and helper utilities for resolving external URLs and link metadata embedded within posts during visibility evaluation.",
+    "whyThisExists": "Malicious actors frequently mask phishing, spam, and malware domains through redirect chains; this client module encapsulates URL metadata required to detect link-based policy violations.",
+    "howItAffectsYourReach": "Posts containing links flagged as spam, phishing, or malicious malware are assigned severe drops (e.g., MALICIOUS_URL_DROP), eliminating them completely from algorithmic and search distribution.",
+    "theGoldenRule": "Never use suspicious link shorteners or link to domains with low trust scores, as link safety flags cause immediate 100% distribution kill switches."
+  },
+  {
+    "path": "visibility-filtering-client/models.rs",
+    "inSimpleTerms": "This file defines the primary Rust data transfer objects (DTOs), request/response structures, and verdict enums used when communicating with the Visibility Filtering gRPC service.",
+    "whyThisExists": "Establishing strictly typed data contracts guarantees serialization consistency and schema evolution safety between calling services (like Home Mixer) and the core filtering backend.",
+    "howItAffectsYourReach": "Encapsulates the exact reasons for visibility actions (e.g., UnspecifiedReason, AbusiveUser, NsfwHighPrecision), translating backend safety evaluations into concrete filtering decisions.",
+    "theGoldenRule": "Understanding safety model schemas reveals that platform moderation is deterministic: specific label triggers map 1:1 to immutable candidate drop verdicts."
+  },
+  {
+    "path": "visibility-filtering-client/tweet_safety_label.rs",
+    "inSimpleTerms": "This file defines the full enumeration and bitfield representation of safety labels that can be attached to individual posts (such as spam, hateful conduct, violence, and adult content).",
+    "whyThisExists": "X processes billions of posts daily; representing dozens of distinct safety classifications as efficient, strongly typed enums minimizes memory allocation and serialization overhead.",
+    "howItAffectsYourReach": "Safety labels like FOSNR (Freedom of Speech, Not Reach) hateful conduct, DoNotAmplify, or HighRecallSpam directly zero out candidate eligibility in recommendation candidate pools.",
+    "theGoldenRule": "Keep content clean of hate speech, targeted harassment, and violent imagery; receiving a single FOSNR or DoNotAmplify label mathematically eliminates out-of-network reach."
+  },
+  {
+    "path": "visibility-filtering-client/vf_client.rs",
+    "inSimpleTerms": "This file implements the high-performance gRPC client used by downstream services to batch-filter candidates and query safety labels with built-in retries, timeouts, and connection pooling.",
+    "whyThisExists": "Timeline generation occurs within strict ~100ms budgets; this client handles asynchronous batching, pipelining, and error resilience so filtering requests never stall the recommendation pipeline.",
+    "howItAffectsYourReach": "If a post candidate is submitted through this client and receives a Drop action from the backend, it is stripped from the user timeline before candidate ranking even begins.",
+    "theGoldenRule": "Passing the initial visibility filtering gate is non-negotiable; candidates dropped at this stage never reach machine learning ranking models."
+  },
+  {
+    "path": "visibility-filtering/clients/gizmoduck_client.rs",
+    "inSimpleTerms": "This client communicates with Gizmoduck, Twitter/X core user profile and account state service, to retrieve author flags such as suspension, deactivation, and safety settings.",
+    "whyThisExists": "Visibility decisions require up-to-the-millisecond verification of author account health (e.g., checking whether an account was suspended or switched to protected mode seconds ago).",
+    "howItAffectsYourReach": "Accounts flagged by Gizmoduck as suspended, deactivated, erased, or protected have 100% of their posts dropped from public algorithmic feeds.",
+    "theGoldenRule": "Maintain account standing in good order; user-level account restrictions in Gizmoduck invalidate all post distribution platform-wide."
+  },
+  {
+    "path": "visibility-filtering/clients/mod.rs",
+    "inSimpleTerms": "This module aggregates and re-exports internal RPC clients that fetch remote data from foundational Twitter/X microservices like SocialGraph and Gizmoduck.",
+    "whyThisExists": "Organizes backend network dependencies into a clean module hierarchy, separating external RPC client logic from core filtering and rule evaluation algorithms.",
+    "howItAffectsYourReach": "Provides the underlying data conduits that supply social relationship and user state signals to rule evaluators.",
+    "theGoldenRule": "Clean subsystem modularity enables independent scaling and rapid updating of safety verification clients."
+  },
+  {
+    "path": "visibility-filtering/clients/socialgraph_client.rs",
+    "inSimpleTerms": "This file interfaces with the SocialGraph service to check relationship edges between users, including follow state, user mutes, user blocks, and retweet muting.",
+    "whyThisExists": "Filtering rules must respect viewer-level privacy and moderation choices (such as not showing tweets from accounts the viewer has blocked or muted) at massive scale.",
+    "howItAffectsYourReach": "If a viewer blocks or mutes an author, SocialGraph signals trigger instant drops for that viewer; high block/mute ratios also degrade global account reputation scores.",
+    "theGoldenRule": "Avoid aggressive or spammy engagement tactics that prompt users to mute or block you, as negative relationship edges shrink your addressable audience."
+  },
+  {
+    "path": "visibility-filtering/config.rs",
+    "inSimpleTerms": "This file parses and manages runtime configuration settings for the Visibility Filtering service, including port bindings, cache capacities, TTLs, and backend connection endpoints.",
+    "whyThisExists": "Allows infrastructure engineers to dynamically tune timeouts, cache invalidation policies, and RPC pool sizes in production without recompiling binary code.",
+    "howItAffectsYourReach": "Sets the SLA timeout thresholds; if filtering requests exceed configured timeouts under high load, aggressive fail-safe policies may prune borderline candidates.",
+    "theGoldenRule": "Optimal server configuration guarantees that safety filtering evaluates complex multi-label rule sets without introducing candidate drop latency."
+  },
+  {
+    "path": "visibility-filtering/filter.rs",
+    "inSimpleTerms": "This file implements the core candidate filtering engine that evaluates hydrated tweet candidates against rule registries for a given safety level and returns filtered results.",
+    "whyThisExists": "Centralizes candidate evaluation logic, ensuring that batch rule processing is executed consistently and deterministically across all feed contexts.",
+    "howItAffectsYourReach": "Directly executes the drop/allow verdict loop: every candidate is evaluated sequentially against policy rules, and the first matching Drop action immediately halts recommendation for that post.",
+    "theGoldenRule": "Content must pass every applicable rule in the safety level hierarchy; a single negative rule trigger produces an immediate drop verdict."
+  },
+  {
+    "path": "visibility-filtering/filter_tweets.rs",
+    "inSimpleTerms": "This file provides the gRPC service handler for the batch tweet filtering endpoint, hydrating candidate metadata and evaluating safety rules for incoming feed generation requests.",
+    "whyThisExists": "Serves as the primary public gRPC API method called by recommendation systems (such as Home Mixer) to sanitize and prune candidate sets before ranking.",
+    "howItAffectsYourReach": "Every candidate post recommended to a user passes through this handler; posts failing safety criteria are stripped from the response payload returned to Home Mixer.",
+    "theGoldenRule": "Algorithmic reach is contingent on passing batch filtering; clean metadata and positive author standing ensure your post survives candidate pruning."
+  },
+  {
+    "path": "visibility-filtering/get_safety_labels.rs",
+    "inSimpleTerms": "This file handles gRPC requests that query raw safety labels for specific tweets or authors from internal caching and storage layers without executing full rule policy trees.",
+    "whyThisExists": "Downstream microservices often need direct access to safety labels (e.g., for analytics, search indexing, or ad suitability) without running end-user viewer context filtering.",
+    "howItAffectsYourReach": "Exposes safety label classifications directly to auxiliary systems like monetization, search, and notification filters.",
+    "theGoldenRule": "Maintaining a label-free profile ensures unrestricted indexing across search, notifications, and ad monetization surfaces."
+  },
+  {
+    "path": "visibility-filtering/hydration/batch.rs",
+    "inSimpleTerms": "This file coordinates parallel batch hydration of tweet candidates, concurrently fetching author data, social graph relationships, safety labels, and tweet metadata across backend services.",
+    "whyThisExists": "Sequential network lookups for hundreds of candidate tweets would blow past latency budgets; batching and executing concurrent async RPCs compresses hydration latency to single-digit milliseconds.",
+    "howItAffectsYourReach": "Ensures all candidate posts are fully enriched with social and safety context before rule evaluation; candidate timeouts during batch hydration result in defensive drops.",
+    "theGoldenRule": "High-speed concurrent hydration prevents candidate dropouts caused by upstream lookup timeouts in high-throughput feed generation."
+  },
+  {
+    "path": "visibility-filtering/hydration/exclusive_content_hydrator.rs",
+    "inSimpleTerms": "This hydrator checks whether a post is marked as exclusive subscriber-only content (Super Follows / Subscriptions) and verifies if the viewer has an active paid subscription.",
+    "whyThisExists": "Monetized creator content must remain strictly gated to paying subscribers while preventing unauthorized leakage into public out-of-network recommendation feeds.",
+    "howItAffectsYourReach": "Exclusive subscriber posts are filtered out of public recommendations and non-subscriber feeds, delivering 100% reach strictly to confirmed paying subscribers.",
+    "theGoldenRule": "Use exclusive content for dedicated subscriber monetization, but publish public posts to maximize organic discoverability and out-of-network viral reach."
+  },
+  {
+    "path": "visibility-filtering/hydration/fallback_cache.rs",
+    "inSimpleTerms": "This file implements an in-memory fallback cache that stores safety label and user metadata to serve requests when primary upstream storage layers (like Twemcache or Manhattan) experience outages.",
+    "whyThisExists": "Distributed storage clusters can experience transient network partitions or failovers; an in-memory fallback cache prevents complete service degradation during infrastructure hiccups.",
+    "howItAffectsYourReach": "Prevents candidate drops caused by transient storage errors, maintaining consistent feed delivery even during backend database maintenance.",
+    "theGoldenRule": "Graceful caching infrastructure shields creator reach from being throttled by transient backend service interruptions."
+  },
+  {
+    "path": "visibility-filtering/hydration/gizmoduck_hydrator.rs",
+    "inSimpleTerms": "This hydrator queries Gizmoduck to populate author profile attributes, including account status (active, suspended, deactivated), protected tweet status, and safety settings.",
+    "whyThisExists": "Decouples the retrieval and caching of core user account state from rule execution, enabling high-performance batching of author metadata lookups.",
+    "howItAffectsYourReach": "If the author is protected and the viewer is not an approved follower, or if the author is suspended/deactivated, candidate posts are immediately pruned.",
+    "theGoldenRule": "Keep your account public and in full compliance with community guidelines to remain eligible for public timeline discovery."
+  },
+  {
+    "path": "visibility-filtering/hydration/metrics.rs",
+    "inSimpleTerms": "This module tracks detailed telemetry, latency histograms, cache hit rates, and error counters for every stage of the candidate hydration pipeline.",
+    "whyThisExists": "Real-time visibility into hydration performance is critical for diagnosing SLA breaches, identifying slow upstream microservices, and optimizing cache efficiency.",
+    "howItAffectsYourReach": "Does not score posts, but metrics monitor hydration health to prevent degraded fallback modes that could limit candidate throughput.",
+    "theGoldenRule": "Observability metrics ensure the filtering pipeline operates within strict sub-millisecond budgets across global traffic spikes."
+  },
+  {
+    "path": "visibility-filtering/hydration/mod.rs",
+    "inSimpleTerms": "This is the root module for the hydration subsystem. It orchestrates the overall workflow of combining raw candidate IDs with author, viewer, tweet, and social graph data into a unified candidate model.",
+    "whyThisExists": "Provides a single entry point for hydrating raw candidate posts into rich domain models required by safety rule evaluators.",
+    "howItAffectsYourReach": "Coordinates the retrieval of every signal used to decide whether your post is eligible for timeline insertion.",
+    "theGoldenRule": "Efficient hydration guarantees that candidate posts are evaluated against the most current real-time author and tweet safety signals."
+  },
+  {
+    "path": "visibility-filtering/hydration/safety_label_hydrator.rs",
+    "inSimpleTerms": "This hydrator fetches safety labels for candidates and authors from multi-tier caching (Twemcache) and persistent storage (Manhattan) to supply rule engines with moderation tags.",
+    "whyThisExists": "Safety labels must be retrieved with sub-millisecond latency for hundreds of candidates simultaneously during live timeline construction.",
+    "howItAffectsYourReach": "Supplies the safety labels (e.g., NSFW, Spam, Hate Speech, Misinformation) that trigger drop or downranking rules in recommendation algorithms.",
+    "theGoldenRule": "Avoiding safety label triggers ensures your content passes the safety label hydrator cleanly with zero negative moderation flags."
+  },
+  {
+    "path": "visibility-filtering/hydration/socialgraph_hydrator.rs",
+    "inSimpleTerms": "This hydrator retrieves viewer-author social relationships from the SocialGraph service, identifying whether the viewer follows, blocks, mutes, or mutes retweets from the author.",
+    "whyThisExists": "Enables safety rules to enforce personalized privacy settings and viewer preferences across all feed recommendation variants.",
+    "howItAffectsYourReach": "Determines whether an impression is in-network or out-of-network; out-of-network impressions undergo significantly stricter safety and reputation filtering.",
+    "theGoldenRule": "Convert viewers into active followers; in-network posts face far fewer safety drops than out-of-network recommendation candidates."
+  },
+  {
+    "path": "visibility-filtering/hydration/tes_hydrator.rs",
+    "inSimpleTerms": "This hydrator communicates with Tweet Engagement / Tweet Entity Services (TES) to fetch post-level metadata, such as legal takedown notices, DMCA restrictions, geo-blocks, and media flags.",
+    "whyThisExists": "Compliance with international laws, DMCA copyright takedowns, and local legal mandates requires real-time hydration of legal and compliance flags.",
+    "howItAffectsYourReach": "Posts subject to DMCA strikes, local legal takedowns, or geo-restrictions are automatically dropped in affected jurisdictions and stripped from out-of-network feeds.",
+    "theGoldenRule": "Only share original or fully licensed media; copyright claims (DMCA) and legal takedowns permanently strip content from recommendation candidate pools."
+  },
+  {
+    "path": "visibility-filtering/hydration/viewer_hydrator.rs",
+    "inSimpleTerms": "This hydrator retrieves viewer context, including viewer ID, account age, stated age, adult content preferences, and login state.",
+    "whyThisExists": "Safety rules (such as NSFW age gating and sensitive media interstitials) require detailed knowledge of the viewing user to determine content suitability.",
+    "howItAffectsYourReach": "Adult or sensitive content is completely hidden from logged-out, underage, or age-unverified viewers, severely restricting total potential audience reach.",
+    "theGoldenRule": "Keep content safe for work and all audiences to maximize eligibility across logged-out and age-restricted viewer segments."
+  },
+  {
+    "path": "visibility-filtering/lib.rs",
+    "inSimpleTerms": "This is the root library crate for the Visibility Filtering service. It declares all internal modules including rules, hydration, safety label sources, twemcache, models, and server handlers.",
+    "whyThisExists": "Structures the entire Visibility Filtering backend codebase into cohesive, reusable Rust modules for both service execution and integration testing.",
+    "howItAffectsYourReach": "Integrates the entire safety filtering architecture that governs post visibility across all X product surfaces.",
+    "theGoldenRule": "The visibility filtering crate is the ultimate authority on whether content is legally, ethically, and socially permissible for distribution on X."
+  },
+  {
+    "path": "visibility-filtering/main.rs",
+    "inSimpleTerms": "This is the binary entry point for the Visibility Filtering microservice. It initializes logging, parses configuration, establishes client connections, and starts the gRPC server.",
+    "whyThisExists": "Provides the executable bootstrap routine to deploy and run Visibility Filtering as a standalone, horizontally scalable microservice in production clusters.",
+    "howItAffectsYourReach": "Runs the production service instances that evaluate billions of post visibility checks every day.",
+    "theGoldenRule": "Robust service initialization ensures uninterrupted 24/7 enforcement of platform safety and recommendation integrity."
+  },
+  {
+    "path": "visibility-filtering/models/author.rs",
+    "inSimpleTerms": "This file defines data structures representing post authors, capturing account state flags such as active, suspended, deactivated, protected, and safety label bitmasks.",
+    "whyThisExists": "Standardizes author-level features into a lightweight model optimized for rapid in-memory rule evaluation.",
+    "howItAffectsYourReach": "Author status flags determine baseline eligibility; negative author flags (e.g., suspended, abusive user) eliminate all posts from recommendation consideration.",
+    "theGoldenRule": "Maintain exemplary account-level trust metrics to ensure all your authored content qualifies for algorithmic amplification."
+  },
+  {
+    "path": "visibility-filtering/models/exclusive_content.rs",
+    "inSimpleTerms": "This file defines models and data structures for exclusive and subscription-gated content, linking post IDs to creator subscription tiers.",
+    "whyThisExists": "Provides a typed representation of paywalled creator content to ensure accurate permission checking during feed assembly.",
+    "howItAffectsYourReach": "Restricts post distribution strictly to verified paid subscribers, preventing public timeline or recommendation exposure.",
+    "theGoldenRule": "Segment your content strategy: use public posts for follower growth and exclusive posts for dedicated monetization."
+  },
+  {
+    "path": "visibility-filtering/models/mod.rs",
+    "inSimpleTerms": "This is the root module for domain models, defining core types like HydratedTweetCandidate, VfAction (Allow, Drop, Interstitial), and rule evaluation structures.",
+    "whyThisExists": "Consolidates all domain models in one location, establishing a clean schema for candidate data as it moves through hydration and rule execution.",
+    "howItAffectsYourReach": "Defines the core action outcomes (Allow, Drop, Interstitial) that decide whether a candidate post reaches the timeline.",
+    "theGoldenRule": "Understanding domain action types highlights that visibility filtering operates with clear, decisive boundaries: Allow, Drop, or Interstitial."
+  },
+  {
+    "path": "visibility-filtering/models/relationship.rs",
+    "inSimpleTerms": "This file defines data structures representing directional relationship edges between viewers and authors (following, blocking, muting, muting retweets).",
+    "whyThisExists": "Encapsulates social graph edge properties into a compact struct for rapid conditional evaluation within safety rules.",
+    "howItAffectsYourReach": "Relationship states control personalized delivery: viewer mutes/blocks drop candidates completely, while follower state exempts content from strict out-of-network filters.",
+    "theGoldenRule": "Fostering positive, follow-worthy relationships is the most effective way to protect your reach from out-of-network filtering restrictions."
+  },
+  {
+    "path": "visibility-filtering/models/safety_labels.rs",
+    "inSimpleTerms": "This file defines internal safety label structures, bitsets, and conversion utilities that represent algorithmic and human moderation classifications.",
+    "whyThisExists": "Efficient bitmask operations on safety labels allow rule engines to check dozens of moderation tags in nanoseconds without string parsing.",
+    "howItAffectsYourReach": "Safety labels like DoNotAmplify, SpamHighRecall, or NsfwHighPrecision trigger instant drops in recommendation feeds (timeline_home_recommendations).",
+    "theGoldenRule": "Keep your content free from automated safety classifications to maintain a clean bitset and preserve full recommendation eligibility."
+  },
+  {
+    "path": "visibility-filtering/models/tweet.rs",
+    "inSimpleTerms": "This file defines the TweetFeatures struct, capturing post-level attributes such as tweet ID, author ID, creation timestamp, media flags, and nullcast status.",
+    "whyThisExists": "Provides a standardized, lightweight representation of a tweet candidate for fast property inspection during rule evaluation.",
+    "howItAffectsYourReach": "Tweet features like nullcast (promoted-only ad tweets) or stale timestamps trigger specific drop rules in organic timelines.",
+    "theGoldenRule": "Ensure standard organic posts are published without restricted flags to qualify for standard timeline indexing."
+  },
+  {
+    "path": "visibility-filtering/models/viewer.rs",
+    "inSimpleTerms": "This file defines ViewerFeatures, capturing viewer identity, age verification status, sensitive media display preferences, and session context.",
+    "whyThisExists": "Tailors filtering decisions to the specific viewer receiving the timeline, respecting user privacy settings and legal age-gating requirements.",
+    "howItAffectsYourReach": "If a viewer has sensitive media disabled, any post with adult or sensitive media labels will be filtered or hidden behind an interstitial warning.",
+    "theGoldenRule": "Creating universally accessible, non-sensitive content ensures your posts are viewable by all users regardless of their individual safety settings."
+  },
+  {
+    "path": "visibility-filtering/rules/metrics.rs",
+    "inSimpleTerms": "This module records metrics and telemetry for rule evaluations, tracking evaluation counts, execution latency, and drop reasons per rule.",
+    "whyThisExists": "Enables Trust and Safety engineers to monitor the impact of moderation rules, detect unexpected rule firing spikes, and ensure rule evaluation stays under latency budgets.",
+    "howItAffectsYourReach": "Does not modify scores directly, but tracks drop rates that help engineering teams tune moderation precision and recall.",
+    "theGoldenRule": "Telemetry tracking ensures platform moderation rules remain calibrated against accidental false-positive drops."
+  },
+  {
+    "path": "visibility-filtering/rules/mod.rs",
+    "inSimpleTerms": "This is the root module for safety rules, defining the Rule trait, RuleContext, Verdict struct, and the core evaluate_rules sequential evaluation loop.",
+    "whyThisExists": "Establishes a pluggable, highly extensible rule framework where individual safety policies can be composed, tested, and evaluated in a standardized pipeline.",
+    "howItAffectsYourReach": "Executes the critical decision loop: iterates through registered rules and halts immediately on the first Drop action, discarding the candidate post.",
+    "theGoldenRule": "Every post must achieve a clean pass across all evaluated rules; the worst action (Drop > Interstitial > Allow) always determines final visibility."
+  },
+  {
+    "path": "visibility-filtering/rules/nsfw_age_gating.rs",
+    "inSimpleTerms": "This file implements age-gating safety rules that drop sensitive and adult content for viewers who are logged out, underage (<18), or have no stated birthdate.",
+    "whyThisExists": "Mandated by legal and child safety regulations worldwide to prevent minors and unverified viewers from accessing adult, sensitive, or graphic media.",
+    "howItAffectsYourReach": "Posts labeled with sensitive media or NSFW flags are completely dropped for logged-out users, minors, and unverified accounts, cutting off a massive portion of potential impressions.",
+    "theGoldenRule": "If your goal is broad viral reach, avoid sensitive/NSFW media tags so your posts remain visible to the entire global audience including logged-out traffic."
+  },
+  {
+    "path": "visibility-filtering/rules/nsfw_interstitial.rs",
+    "inSimpleTerms": "This file implements rules that wrap adult, violent, or sensitive media in warning interstitials for adult viewers who have not opted out of sensitive warnings.",
+    "whyThisExists": "Allows adult users to browse the platform safely by placing a consent-based warning overlay over sensitive media instead of dropping the post completely.",
+    "howItAffectsYourReach": "Replaces direct media display with a blur/click-to-view interstitial warning, drastically reducing engagement, video completion rates, and retweets.",
+    "theGoldenRule": "Keep media clean and safe for work to avoid warning interstitials that create massive friction and kill engagement velocity."
+  },
+  {
+    "path": "visibility-filtering/rules/nullcast_rule.rs",
+    "inSimpleTerms": "This rule drops nullcasted tweets (promoted-only ad tweets not published to a user public timeline) from organic timeline feeds.",
+    "whyThisExists": "Ad campaigns create dark posts (nullcasts) intended strictly for targeted ad delivery; they must never leak into organic chronological or recommendation feeds.",
+    "howItAffectsYourReach": "Nullcasted ad tweets are dropped 100% from organic For You and Following feeds, restricting their delivery exclusively to paid advertising campaigns.",
+    "theGoldenRule": "Publish standard organic public tweets if you want organic discovery and recommendation amplification."
+  },
+  {
+    "path": "visibility-filtering/rules/registry.rs",
+    "inSimpleTerms": "This file defines policy registries for different safety levels (FilterAll, TimelineHome, TimelineHomeRecommendations), assembling specific rule sets for in-network vs out-of-network feeds.",
+    "whyThisExists": "Different product surfaces require different safety standards; out-of-network recommendations enforce dozens of additional strict safety rules that do not apply to followed accounts.",
+    "howItAffectsYourReach": "This is the single most critical policy file: TimelineHome (following) allows soft-flagged posts, but TimelineHomeRecommendations (For You) enforces 26+ aggressive drop rules (e.g., DoNotAmplify, NSFW, Spam, AbusiveUser).",
+    "theGoldenRule": "Out-of-network recommendation in the For You feed is a privilege with zero tolerance: any safety flag that is tolerated in Following will cause an instant drop in Recommendations."
+  },
+  {
+    "path": "visibility-filtering/rules/socialgraph_rules.rs",
+    "inSimpleTerms": "This file enforces social relationship rules, dropping posts if the viewer blocks the author, mutes the author, mutes retweets from the author, or lacks subscription access to exclusive content.",
+    "whyThisExists": "Guarantees user agency and privacy by strictly respecting block, mute, and subscription boundaries across all timeline generation requests.",
+    "howItAffectsYourReach": "Viewer blocks and mutes result in 100% candidate drops for those users; high mute/block velocity also negatively impacts platform-wide recommendation standing.",
+    "theGoldenRule": "Respect your audience; being blocked or muted by users directly eliminates your visibility to them and damages your broader reputation score."
+  },
+  {
+    "path": "visibility-filtering/rules/tes_rules.rs",
+    "inSimpleTerms": "This file implements compliance rules for Tweet Entity Service signals, dropping posts with legal takedowns, local law violations, DMCA copyright strikes, or stale timestamps.",
+    "whyThisExists": "Enforces legal compliance, intellectual property protection, and timeline freshness requirements at the filtering layer.",
+    "howItAffectsYourReach": "Posts flagged for copyright infringement (DMCA), court-ordered takedowns, or geo-restrictions are dropped from all affected feeds and out-of-network discovery.",
+    "theGoldenRule": "Never post copyrighted audio/video without authorization; automated DMCA and legal takedown tags permanently eliminate post reach."
+  },
+  {
+    "path": "visibility-filtering/rules/tweet_flag_rules.rs",
+    "inSimpleTerms": "This file implements drop rules based on tweet-level NSFW flags (user-declared or admin-assigned) for out-of-network recommendation feeds.",
+    "whyThisExists": "Ensures that content flagged as adult or sensitive is strictly excluded from algorithmic recommendation feeds while remaining accessible to direct followers.",
+    "howItAffectsYourReach": "Any post marked with TweetNsfwUser or TweetNsfwAdmin flags is automatically dropped from the For You recommendations feed (0% out-of-network reach).",
+    "theGoldenRule": "Marking tweets as sensitive or receiving admin NSFW flags confines your reach strictly to existing followers, completely shutting off viral recommendation."
+  },
+  {
+    "path": "visibility-filtering/rules/tweet_label_drops.rs",
+    "inSimpleTerms": "This file defines post-level safety label drop rules, including PDNA (Public Denial of Notoriety/Child Safety), Spam, Bounce, Emergency Use Only, and Freedom of Speech Not Reach (FOSNR) hate speech/violence rules.",
+    "whyThisExists": "Implements X core safety and moderation policies, converting automated ML classifications and human moderation labels into definitive drop actions.",
+    "howItAffectsYourReach": "Labels like FOSNR Hateful Conduct, FOSNR Violent Speech, DoNotAmplify, and SpamHighRecall trigger total drops in recommendation feeds (reducing algorithmic reach to absolute zero).",
+    "theGoldenRule": "Comply strictly with hateful conduct and violent speech policies; FOSNR labels execute the Freedom of Speech, Not Reach doctrine by dropping posts from all algorithmic discovery."
+  },
+  {
+    "path": "visibility-filtering/rules/user_label_drops.rs",
+    "inSimpleTerms": "This file implements author-level label drop rules for recommendations, dropping candidates if the creator is flagged for NSFW avatar/banner, high-recall spam, compromise, impersonation, or abuse.",
+    "whyThisExists": "Protects recommendation feeds from low-reputation, abusive, compromised, or impersonator accounts by filtering all candidates at the author level.",
+    "howItAffectsYourReach": "Receiving author-level labels (e.g., DoNotAmplifyNonFollowerUser, AbusiveHighRecallUser, ImpersonationHighPrecisionUser) wipes out 100% of out-of-network recommendation reach across all your posts.",
+    "theGoldenRule": "Protect your account security (2FA) and profile aesthetics (clean avatar/banner); author-level moderation tags penalize every single tweet you publish."
+  },
+  {
+    "path": "visibility-filtering/rules/user_rules.rs",
+    "inSimpleTerms": "This file defines foundational author status rules, dropping posts from suspended, deactivated, erased, offboarded, protected, or adult-flagged accounts.",
+    "whyThisExists": "Prevents ghost, deleted, banned, or privacy-restricted accounts from appearing in public recommendation feeds.",
+    "howItAffectsYourReach": "Suspended or deactivated accounts suffer 100% post drops platform-wide; protected accounts are restricted exclusively to approved followers.",
+    "theGoldenRule": "Keep your account active, public, and in good standing to participate in global feed distribution."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/cached_value.rs",
+    "inSimpleTerms": "This file defines cached envelope structures and timestamped wrappers for safety label data stored in in-memory and distributed caches.",
+    "whyThisExists": "Attaching expiration timestamps and version metadata to cached safety labels ensures stale moderation decisions are automatically invalidated and refreshed.",
+    "howItAffectsYourReach": "Ensures moderation label updates (such as appeal approvals or label removals) propagate quickly into filtering decisions.",
+    "theGoldenRule": "Fast cache expiration guarantees that resolved moderation appeals restore normal account distribution without prolonged cache lag."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/codec.rs",
+    "inSimpleTerms": "This file implements high-performance serialization and deserialization codecs for encoding safety label bitsets and protocol buffers into binary cache formats.",
+    "whyThisExists": "Compact binary encoding minimizes network bandwidth and memory footprint when storing millions of safety label sets in Twemcache clusters.",
+    "howItAffectsYourReach": "Ensures microsecond-level decoding of safety metadata during candidate hydration, preventing latency-induced candidate drops.",
+    "theGoldenRule": "Optimized binary codecs allow the algorithm to evaluate comprehensive safety profiles at massive scale with near-zero latency."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/expiring_cache.rs",
+    "inSimpleTerms": "This file implements a concurrent, time-bounded in-memory LRU cache with automatic TTL expiration for frequently accessed safety labels.",
+    "whyThisExists": "Caches hot safety label records in local process memory to avoid repeated network round-trips to remote caching tiers for viral posts and popular creators.",
+    "howItAffectsYourReach": "Maintains lightning-fast safety label resolution for viral tweets, ensuring viral spikes do not overwhelm moderation backends.",
+    "theGoldenRule": "High-speed local caching ensures viral posts maintain seamless timeline delivery without encountering safety check bottlenecks."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/lookup.rs",
+    "inSimpleTerms": "This file coordinates multi-tiered safety label lookups, querying local in-memory caches first, then remote Twemcache, and finally persistent Manhattan storage on cache misses.",
+    "whyThisExists": "Implements the classic tiered caching pattern (L1 local cache -> L2 distributed cache -> L3 database) to achieve high throughput, low latency, and high data reliability.",
+    "howItAffectsYourReach": "Guarantees reliable retrieval of safety labels; ensures moderation status is accurately verified before any post is recommended.",
+    "theGoldenRule": "Tiered storage architecture ensures that safety evaluations are both ultra-fast and resilient against single-point-of-failure outages."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/manhattan.rs",
+    "inSimpleTerms": "This file implements the storage adapter for Manhattan, Twitter/X distributed key-value database, querying persistent safety label tables when cache misses occur.",
+    "whyThisExists": "Manhattan serves as the durable system of record for all safety and moderation labels assigned by ML pipelines and human review teams.",
+    "howItAffectsYourReach": "Persistently stores author and tweet safety classifications, ensuring safety restrictions survive cache flushes and server restarts.",
+    "theGoldenRule": "Moderation actions are durably recorded in Manhattan; maintaining a clean compliance history is essential for long-term algorithmic health."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/metrics.rs",
+    "inSimpleTerms": "This file tracks latency, hit/miss rates, and error metrics for safety label lookups across local memory, Twemcache, and Manhattan backends.",
+    "whyThisExists": "Provides real-time observability into safety data retrieval performance, alerting on cache degradations or database latency spikes.",
+    "howItAffectsYourReach": "Monitors lookup health to ensure safety data infrastructure never becomes a bottleneck during global breaking news events.",
+    "theGoldenRule": "Robust telemetry guarantees the stability and responsiveness of the platform safety infrastructure."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/mh_client.rs",
+    "inSimpleTerms": "This file provides the low-level RPC client wrapper for communicating with Manhattan key-value storage endpoints with connection pooling and timeout handling.",
+    "whyThisExists": "Encapsulates network communication, endpoint routing, and error mapping for Manhattan database interactions.",
+    "howItAffectsYourReach": "Provides the underlying persistent data link that confirms safety compliance for candidate posts.",
+    "theGoldenRule": "Reliable database clients prevent downstream recommendation services from encountering lookup timeouts."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/mod.rs",
+    "inSimpleTerms": "This is the root module for safety label sources, binding together caching, codecs, Manhattan clients, protocol buffers, and lookup orchestrators.",
+    "whyThisExists": "Organizes safety label data access into a clean, modular subsystem with a unified public API for candidate hydrators.",
+    "howItAffectsYourReach": "Provides the data foundation for all safety rule evaluations across the platform.",
+    "theGoldenRule": "Unified safety data architecture ensures consistent moderation enforcement across all feed types."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/proto.rs",
+    "inSimpleTerms": "This file handles Protocol Buffer message conversions, mapping raw serialized protobuf bytes into internal safety label bitsets and structs.",
+    "whyThisExists": "Translates cross-language protobuf schemas used across X microservices into efficient, idiomatic Rust data structures.",
+    "howItAffectsYourReach": "Accurately maps serialized safety tags into the internal bitmasks evaluated by drop rules.",
+    "theGoldenRule": "Schema-safe protobuf conversions guarantee that safety classifications are interpreted accurately without corruption."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/source.rs",
+    "inSimpleTerms": "This file defines the primary SafetyLabelSource trait and high-level query interface for batch-retrieving safety labels for tweets and authors.",
+    "whyThisExists": "Abstracts the underlying storage implementation behind a clean trait interface, allowing easy mocking in unit tests and modular backend swaps.",
+    "howItAffectsYourReach": "Coordinates the retrieval of safety classifications that dictate whether a candidate post qualifies for recommendation feeds.",
+    "theGoldenRule": "Clean abstractions ensure safety label retrieval remains robust, testable, and lightning fast."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/twemcache.rs",
+    "inSimpleTerms": "This file implements the Twemcache adapter for safety labels, querying distributed memcached clusters using consistent hashing to retrieve cached safety tags.",
+    "whyThisExists": "Twemcache provides sub-millisecond distributed caching, absorbing over 99% of safety label read traffic away from persistent databases.",
+    "howItAffectsYourReach": "Delivers safety labels with sub-millisecond latency, ensuring candidate posts pass through hydration without hitting timeout drops.",
+    "theGoldenRule": "High cache hit rates in Twemcache guarantee responsive, low-latency candidate scoring in the recommendation engine."
+  },
+  {
+    "path": "visibility-filtering/safety_label_source/types.rs",
+    "inSimpleTerms": "This file defines core types, keys, and entity identifiers (TweetId, UserId, LabelSet) used throughout the safety label data retrieval layer.",
+    "whyThisExists": "Enforces strong typing across safety data lookups, preventing identifier mix-ups between user IDs and tweet IDs.",
+    "howItAffectsYourReach": "Ensures safety rules accurately evaluate author labels against authors and tweet labels against tweets.",
+    "theGoldenRule": "Strict typing prevents false-positive moderation actions caused by data entity confusion."
+  },
+  {
+    "path": "visibility-filtering/server.rs",
+    "inSimpleTerms": "This file defines the core gRPC server implementation for the Visibility Filtering service, registering service endpoints, health checks, and request dispatchers.",
+    "whyThisExists": "Acts as the top-level gRPC server daemon that exposes FilterTweets and GetSafetyLabels RPC methods to client microservices across Twitter/X.",
+    "howItAffectsYourReach": "Processes all incoming visibility filtering requests from recommendation pipelines; server health directly dictates whether feeds receive filtered candidates.",
+    "theGoldenRule": "High-throughput, asynchronous server architecture guarantees low-latency filtering for millions of concurrent users."
+  },
+  {
+    "path": "visibility-filtering/server_deps.rs",
+    "inSimpleTerms": "This file wires up all server dependencies, initializing connection pools, hydrators, safety label sources, and rule policies during service startup.",
+    "whyThisExists": "Implements dependency injection for the Visibility Filtering service, assembling complex multi-tier dependencies into a cohesive server context.",
+    "howItAffectsYourReach": "Ensures all safety rules, caches, and client connections are fully initialized and ready to filter candidate streams.",
+    "theGoldenRule": "Seamless dependency initialization guarantees reliable, high-availability safety filtering across all production clusters."
+  },
+  {
+    "path": "visibility-filtering/twemcache/accrual.rs",
+    "inSimpleTerms": "This file implements the Phi Accrual failure detector algorithm for Twemcache nodes, estimating node health based on heartbeat intervals and response times.",
+    "whyThisExists": "Binary up/down health checks are too crude for large distributed clusters; accrual failure detection dynamically calculates a suspicion threshold to route traffic around failing nodes smoothly.",
+    "howItAffectsYourReach": "Prevents cache request hangs and timeout spikes by proactively routing safety lookups away from degraded cache servers.",
+    "theGoldenRule": "Intelligent failure detection prevents backend network blips from causing candidate dropouts during feed generation."
+  },
+  {
+    "path": "visibility-filtering/twemcache/client.rs",
+    "inSimpleTerms": "This file implements the high-level asynchronous Twemcache client, managing pipelined get/set commands, batch requests, and connection retries across cluster nodes.",
+    "whyThisExists": "Provides a robust, non-blocking Memcached client optimized for massive concurrency and multi-key batch lookups in Rust.",
+    "howItAffectsYourReach": "Enables sub-millisecond retrieval of safety labels for hundreds of candidate tweets simultaneously.",
+    "theGoldenRule": "Pipelined asynchronous cache access ensures safety checks never slow down timeline ranking pipelines."
+  },
+  {
+    "path": "visibility-filtering/twemcache/connection.rs",
+    "inSimpleTerms": "This file manages individual TCP socket connections to Memcached/Twemcache servers, handling ASCII/binary protocol framing, buffer pooling, and read/write loops.",
+    "whyThisExists": "Low-level connection pooling and zero-copy buffer management maximize network throughput and minimize CPU overhead on high-volume cache nodes.",
+    "howItAffectsYourReach": "Maintains active TCP keep-alives and rapid socket recycling to guarantee sub-millisecond cache latency.",
+    "theGoldenRule": "Efficient socket handling ensures consistent, high-speed safety data retrieval under peak platform traffic."
+  },
+  {
+    "path": "visibility-filtering/twemcache/discovery.rs",
+    "inSimpleTerms": "This file handles dynamic server discovery for Twemcache clusters, watching cluster membership changes and updating the consistent hash ring in real time.",
+    "whyThisExists": "Cache clusters scale horizontally by adding and removing nodes; dynamic discovery updates hash rings on the fly without service restarts.",
+    "howItAffectsYourReach": "Ensures cache traffic is evenly distributed and cache misses remain minimal during cluster scaling events.",
+    "theGoldenRule": "Dynamic cluster membership ensures cache availability and eliminates cold-cache latency spikes."
+  },
+  {
+    "path": "visibility-filtering/twemcache/error.rs",
+    "inSimpleTerms": "This file defines error types and error handling enumerations for Twemcache operations, including connection errors, protocol parse errors, and timeouts.",
+    "whyThisExists": "Provides granular error classifications so cache clients can intelligently distinguish between retryable network blips and fatal protocol errors.",
+    "howItAffectsYourReach": "Enables graceful fallback to secondary caches or databases on cache errors rather than dropping candidates.",
+    "theGoldenRule": "Granular error recovery guarantees resilient safety data hydration under adverse network conditions."
+  },
+  {
+    "path": "visibility-filtering/twemcache/host_pool.rs",
+    "inSimpleTerms": "This file manages connection pools across multiple Twemcache host nodes, balancing load and monitoring host availability using the accrual failure detector.",
+    "whyThisExists": "Maintains pools of active, warm TCP connections to all cache nodes to eliminate connection setup latency on incoming requests.",
+    "howItAffectsYourReach": "Eliminates connection handshake delays, ensuring safety label queries return within tight latency budgets.",
+    "theGoldenRule": "Warm connection pooling ensures rapid candidate hydration and prevents request queueing."
+  },
+  {
+    "path": "visibility-filtering/twemcache/host_pool_tests.rs",
+    "inSimpleTerms": "This file contains comprehensive unit and integration tests for the Twemcache host pool and accrual failure detection logic.",
+    "whyThisExists": "Verifies that connection pooling, failovers, node blacklisting, and recovery behaviors operate reliably under simulated failure scenarios.",
+    "howItAffectsYourReach": "Ensures the stability and correctness of the caching layer that powers safety label retrieval.",
+    "theGoldenRule": "Thoroughly tested infrastructure prevents unexpected cache cluster failures and ensures continuous service reliability."
+  },
+  {
+    "path": "visibility-filtering/twemcache/key.rs",
+    "inSimpleTerms": "This file defines cache key formatting, namespace hashing, and key serialization utilities for Twemcache entries.",
+    "whyThisExists": "Standardizes key namespaces (e.g., tweet safety labels vs user safety labels) to avoid key collisions across different cached data domains.",
+    "howItAffectsYourReach": "Ensures cache lookups query the exact key namespace, preventing corrupted or mismatched safety metadata lookups.",
+    "theGoldenRule": "Clean key namespacing prevents cache collisions and ensures accurate safety label resolution."
+  },
+  {
+    "path": "visibility-filtering/twemcache/metrics.rs",
+    "inSimpleTerms": "This file tracks operational metrics for Twemcache operations, including connection counts, command latencies, cache hit/miss ratios, and socket errors.",
+    "whyThisExists": "Provides real-time observability into cache cluster performance and health, alerting engineers to cache saturation or node degradations.",
+    "howItAffectsYourReach": "Monitors cache responsiveness to ensure filtering latency stays well within recommendation SLA limits.",
+    "theGoldenRule": "Proactive telemetry ensures high cache efficiency and seamless candidate throughput."
+  },
+  {
+    "path": "visibility-filtering/twemcache/mod.rs",
+    "inSimpleTerms": "This is the root module for the Twemcache subsystem, exposing the consistent hash ring, client, connection pool, and error types to the rest of the application.",
+    "whyThisExists": "Encapsulates Twitter/X custom Rust Twemcache client library into a structured, cohesive module.",
+    "howItAffectsYourReach": "Provides the ultra-fast caching foundation that allows safety filtering to evaluate hundreds of candidate posts in milliseconds.",
+    "theGoldenRule": "Modular caching architecture powers high-performance candidate hydration across all recommendation feeds."
+  },
+  {
+    "path": "visibility-filtering/twemcache/ring.rs",
+    "inSimpleTerms": "This file implements a consistent hashing ring using Ketama / MD5 hashing to distribute cache keys uniformly across Twemcache host nodes.",
+    "whyThisExists": "Consistent hashing ensures that adding or removing cache nodes minimizes key remapping, maintaining high cache hit rates during cluster resizing.",
+    "howItAffectsYourReach": "Ensures safety labels are consistently cached and quickly found, preventing database overloads and candidate lookup timeouts.",
+    "theGoldenRule": "Consistent hashing maintains maximum cache hit rates, ensuring your posts safety status is verified instantly."
+  }
+]

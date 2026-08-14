@@ -1,0 +1,65 @@
+[
+  {
+    "path": "adult-content/BUILD",
+    "inSimpleTerms": "This Pants/Bazel build configuration file defines the root Python library target for the adult content safety subsystem. It packages all top-level Python modules and CLI execution scripts into a unified, distributable build artifact.",
+    "whyThisExists": "X's monorepo relies on explicit build targets to enforce dependency hygiene, manage artifact hashing, and bypass static type checking (`no-mypy`) across rapid computer vision safety iterations.",
+    "howItAffectsYourReach": "Does not execute live ranking logic directly, but packaging failures prevent safety classification models and calibration routines from deploying to production serving pipelines.",
+    "theGoldenRule": "Clean monorepo build targets ensure zero-downtime model updates across all media safety classification clusters."
+  },
+  {
+    "path": "adult-content/calibration.py",
+    "inSimpleTerms": "This module fits non-parametric Isotonic Regression curves to raw adult content model predictions. It converts arbitrary raw logits into true posterior probabilities and computes precision, recall, and false-positive rates across 200 granular threshold buckets.",
+    "whyThisExists": "Raw neural network outputs are uncalibrated and shift under class imbalance. Downstream policy engines (like Visibility Filtering) require strictly calibrated probabilities to enforce deterministic safety thresholds (e.g., exact 90% recall or 99% precision guarantees).",
+    "howItAffectsYourReach": "Directly defines the mathematical operating points for content demotion. If a post's media embedding produces a calibrated probability exceeding specific policy thresholds, it triggers automated NSFW interstitials, search exclusion, or complete candidate drop in recommendation feeds.",
+    "theGoldenRule": "Understand that moderation operates on monotonic calibrated probabilities rather than raw scores; even marginal decreases in borderline visual signals can shift content below strict filtering thresholds."
+  },
+  {
+    "path": "adult-content/config.py",
+    "inSimpleTerms": "This file specifies the immutable hyperparameters and directory structures for adult content model training and score calibration. It standardizes 256-dimensional embedding inputs, 128 hidden dense units, Adam optimization rates, batch sizes, and automated timestamped export paths.",
+    "whyThisExists": "Centralizing model topology, embedding dimensionality, and evaluation configurations prevents parameter drift across offline training jobs and automated retraining pipelines.",
+    "howItAffectsYourReach": "Dictates the architecture and evaluation resolution of the adult content classifier; changes to embedding dimensions or layer sizing alter the model's sensitivity in flagging visual assets.",
+    "theGoldenRule": "Consistent hyperparameter schema guarantees reproducibility between offline computer vision evaluations and production inference systems."
+  },
+  {
+    "path": "adult-content/dataset_utils.py",
+    "inSimpleTerms": "This module ingests and parses TFRecord datasets containing 256-dimensional media embeddings and safety labels from Google Cloud Storage. It applies rejection resampling to balance skewed 50/50 training distributions, decodes binary protobufs, and constructs optimized `tf.data` input pipelines.",
+    "whyThisExists": "Adult content in organic post streams is heavily imbalanced; without rejection resampling and high-throughput multi-threaded TFRecord parsing, computer vision classifiers underfit minority explicit classes and starve GPU training nodes.",
+    "howItAffectsYourReach": "By balancing training datasets to a 50/50 positive/negative distribution, the model becomes exceptionally sensitive to subtle, borderline adult patterns, increasing the likelihood of edge-case classification for borderline suggestive media.",
+    "theGoldenRule": "Avoid visually suggestive or borderline explicit media thumbnails; the model is deliberately oversampled to aggressively detect edge-case visual patterns."
+  },
+  {
+    "path": "adult-content/training.py",
+    "inSimpleTerms": "This module builds and trains the deep neural network classifier for adult content detection. It constructs a Sequential architecture with Batch Normalization, GELU activations, and Sigmoid output over 256-dimensional embeddings, optimizing for binary crossentropy with early stopping and PR-AUC tracking.",
+    "whyThisExists": "Classifying raw image pixels on every request is too computationally expensive at scale; this service trains a lightweight top-layer classifier directly on precomputed visual embeddings to achieve microsecond-level safety inference.",
+    "howItAffectsYourReach": "Posts with media classified as adult are stripped of algorithmic distribution, placed behind sensitive media warning interstitial gates, and excluded from Out-of-Network For You candidate generation.",
+    "theGoldenRule": "Self-tag sensitive media appropriately; untagged explicit media flagged by this classifier triggers severe distribution suppression and negative author health score penalties."
+  },
+  {
+    "path": "adult-content/scripts/BUILD",
+    "inSimpleTerms": "This build file declares executable Python binary targets for standalone training and calibration scripts. It links third-party dependencies like TensorFlow 2.5.0, pandas, and scikit-learn to the respective CLI entry points.",
+    "whyThisExists": "Separating library code from executable binary entry points allows CI/CD workers and distributed training schedulers to execute specific model lifecycle steps with minimal dependency overhead.",
+    "howItAffectsYourReach": "Enables automated safety model retraining and threshold calibration runs across cluster infrastructure, directly updating the safety barriers that govern feed eligibility.",
+    "theGoldenRule": "Explicit target dependencies ensure continuous delivery of computer vision safety weights to production edge servers."
+  },
+  {
+    "path": "adult-content/scripts/calibrate_model_scores.py",
+    "inSimpleTerms": "This CLI script executes the end-to-end score calibration pipeline against evaluation CSVs. It computes precision, recall, and false-positive rate curves across discrete thresholds and exports `metrics_at_thresholds.csv` for downstream consumption by Visibility Filtering rules.",
+    "whyThisExists": "Provides safety engineers with a reproducible, automated workflow to recalibrate decision boundaries whenever visual distribution patterns or platform policies change.",
+    "howItAffectsYourReach": "The exported calibration CSV establishes the exact threshold cutoff points used in production; crossing a calibrated threshold instantly transitions content from eligible to suppressed or gated.",
+    "theGoldenRule": "Calibration curves balance false positives against safety recall; keeping media clearly benign prevents falling into conservative threshold penalty zones."
+  },
+  {
+    "path": "adult-content/scripts/train_model.py",
+    "inSimpleTerms": "This command-line script orchestrates model training runs from Google Cloud Storage dataset paths. It parses execution flags for learning rate, batch size, epochs, and resampling, runs the model training loop, and saves the serialized SavedModel artifact.",
+    "whyThisExists": "Decouples hyperparameter tuning and cloud dataset orchestration from the underlying TensorFlow model code, enabling automated distributed training jobs on GPU clusters.",
+    "howItAffectsYourReach": "Outputs the production SavedModel weights that score all media uploads across the platform, forming the frontline computer vision defense for feed recommendations.",
+    "theGoldenRule": "High model accuracy on precomputed visual embeddings ensures high-precision moderation without introducing inference latency bottlenecks."
+  },
+  {
+    "path": "pnsfwmedia/model_experimental.py",
+    "inSimpleTerms": "This module implements an experimental multimodal safety model that combines frozen 256-dimensional Twitter-CLIP visual embeddings with author-level trust signals (Agatha calibrated NSFW score, text NSFW score, follower graph counts, and consumer-follower ratios). It exposes a serialized DeepBird gRPC serving signature and a live stats monitoring server.",
+    "whyThisExists": "Evaluating images in isolation produces false positives on artistic or ambiguous content; fusing visual embeddings with historical author reputation (Agatha) and audience engagement graphs dramatically improves classification precision while missing-feature indicators prevent cold-start failures.",
+    "howItAffectsYourReach": "If your account has a high historical Agatha NSFW score or an audience concentrated in adult content, this model assigns higher NSFW probabilities to even benign or borderline media uploads, drastically suppressing recommendation reach.",
+    "theGoldenRule": "Account health and audience composition directly influence media classification; maintaining high author trust protects borderline visual content from aggressive automated NSFW suppression."
+  }
+]

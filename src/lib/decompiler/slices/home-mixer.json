@@ -1,0 +1,1507 @@
+[
+  {
+    "path": "home-mixer/ads/following_ad_blender.rs",
+    "inSimpleTerms": "Blends sponsored ad items into the chronological and ranked Following feed timeline. It enforces ad distance gaps and brand safety checks between organic creator posts and promoted campaigns.",
+    "whyThisExists": "X engineers needed dedicated ad insertion logic for Following timelines that preserves follower post ordering while satisfying advertiser safety and impression spacing constraints.",
+    "howItAffectsYourReach": "Injects promoted slots into follower feeds; if an organic post triggers keyword or handle brand safety alerts, nearby ad slots are moved or suppressed, preventing ad collisions.",
+    "theGoldenRule": "Maintain clean, brand-safe metadata to ensure organic posts comfortably co-exist with high-value ad placements without triggering negative safety filters."
+  },
+  {
+    "path": "home-mixer/ads/mod.rs",
+    "inSimpleTerms": "The root module declaration for Home Mixer's advertising subsystems, exporting ad blenders, safety checkers, and timeline injection traits.",
+    "whyThisExists": "Organizes diverse ad blending algorithms (SafeGap, PartitionOrganic, TimeGap, and FollowingAdBlender) into a modular, testable interface.",
+    "howItAffectsYourReach": "Controls the loading and execution of ad injection pipelines that interleave monetized inventory with organic user posts.",
+    "theGoldenRule": "Understand that ad insertion operates downstream of organic scoring, interleaving ads without altering underlying organic candidate scores."
+  },
+  {
+    "path": "home-mixer/ads/partition_organic_blender.rs",
+    "inSimpleTerms": "Partitions organic post candidates into distinct segments and slots sponsored ads into calculated gap positions while strictly enforcing brand safety rules.",
+    "whyThisExists": "Allows the recommendation engine to distribute ads evenly across algorithmic For You feeds without disrupting high-density conversational clusters.",
+    "howItAffectsYourReach": "If an organic post contains risky text or keywords flagged by advertiser brand safety settings, the blender enforces spacing buffers, shifting ad placement away from controversial content.",
+    "theGoldenRule": "Avoid flagged risk keywords in organic posts to prevent ad adjacency friction and maintain seamless feed placement."
+  },
+  {
+    "path": "home-mixer/ads/safe_gap_blender.rs",
+    "inSimpleTerms": "Enforces minimum item spacing (safe gap) between successive ads and between ads and sensitive organic content in the feed.",
+    "whyThisExists": "Advertisers require strict separation from adjacent ads and controversial creator content to guarantee brand suitability and viewability.",
+    "howItAffectsYourReach": "Guarantees a minimum number of organic posts between advertisements, ensuring organic reach is never crowded out by consecutive promoted posts.",
+    "theGoldenRule": "Produce high-ranking organic content that naturally wins top feed positions between mandatory ad insertion slots."
+  },
+  {
+    "path": "home-mixer/ads/tests/blender_comparison_test.rs",
+    "inSimpleTerms": "Benchmark and regression test suite comparing different ad blender strategies under simulated feed payloads.",
+    "whyThisExists": "Ensures that modifications to ad injection algorithms do not cause unexpected feed truncation, ad clustering, or performance regressions.",
+    "howItAffectsYourReach": "Guarantees algorithmic fairness and stability across ad insertion strategies, verifying that organic candidates are never dropped unintentionally.",
+    "theGoldenRule": "Reliable test coverage ensures stable ad slotting rules that protect organic creator visibility."
+  },
+  {
+    "path": "home-mixer/ads/tests/following_ad_blender_tests.rs",
+    "inSimpleTerms": "Unit tests verifying ad insertion constraints specifically within the Following feed pipeline.",
+    "whyThisExists": "Validates that brand safety verdicts and minimum post thresholds are strictly honored when ads are mixed into chronological following feeds.",
+    "howItAffectsYourReach": "Protects chronological feed integrity so follower posts maintain expected sequence without being dropped during ad insertion.",
+    "theGoldenRule": "Write unit-tested, predictable feed flows so follower timelines remain consistent and reliable."
+  },
+  {
+    "path": "home-mixer/ads/tests/mod.rs",
+    "inSimpleTerms": "Module file grouping all ad blending and brand safety test suites.",
+    "whyThisExists": "Provides centralized test discovery and execution for all ad-related mixing logic.",
+    "howItAffectsYourReach": "Indirect; guarantees the stability of ad mixing systems across production deployments.",
+    "theGoldenRule": "Comprehensive automated testing protects feed distribution systems against revenue and reach regressions."
+  },
+  {
+    "path": "home-mixer/ads/tests/partition_organic_blender_tests.rs",
+    "inSimpleTerms": "Unit tests for the partition organic ad blender, validating brand safety keyword filtering and slot allocations.",
+    "whyThisExists": "Ensures that partitioned organic feeds correctly place ads at configured target offsets without violating advertiser exclusions.",
+    "howItAffectsYourReach": "Confirms that organic posts are never omitted when ads are inserted into partitioned feed slices.",
+    "theGoldenRule": "Respect brand safety boundaries so your posts safely coexist with high-tier advertising."
+  },
+  {
+    "path": "home-mixer/ads/tests/safe_gap_blender_tests.rs",
+    "inSimpleTerms": "Unit tests verifying that the safe gap blender strictly enforces minimum post separation between ads.",
+    "whyThisExists": "Validates that back-to-back ad delivery is prevented across all edge cases in algorithmic timeline generation.",
+    "howItAffectsYourReach": "Ensures organic posts are consistently distributed between ads, preserving user engagement and organic post impressions.",
+    "theGoldenRule": "High organic score density ensures your posts fill the required safe gaps between sponsored content."
+  },
+  {
+    "path": "home-mixer/ads/tests/time_gap_blender_tests.rs",
+    "inSimpleTerms": "Unit tests testing time-based ad insertion intervals and elapsed-time spacing algorithms.",
+    "whyThisExists": "Ensures temporal spacing constraints function properly across rapid pagination and slow scrolling sessions.",
+    "howItAffectsYourReach": "Guarantees user attention is paced evenly, preventing ad fatigue and keeping organic content prominently featured.",
+    "theGoldenRule": "Deliver engaging media that maximizes dwell time, allowing your post to dominate the user's attention window."
+  },
+  {
+    "path": "home-mixer/ads/time_gap_blender.rs",
+    "inSimpleTerms": "Blends ads based on temporal dwell time and chronological timestamps rather than strict item counts alone.",
+    "whyThisExists": "Optimizes monetization by pacing ad delivery according to real user session duration and scrolling speeds.",
+    "howItAffectsYourReach": "Controls pacing between organic candidates and dynamic ad inventory during long user sessions.",
+    "theGoldenRule": "Captivating content that extends session length increases overall feed opportunities for subsequent creator posts."
+  },
+  {
+    "path": "home-mixer/ads/util.rs",
+    "inSimpleTerms": "Helper utilities for ad blending, containing functions for brand safety risk checks, keyword drops, and feed item conversion.",
+    "whyThisExists": "Centralizes reusable brand safety checks and data format conversions across all ad blender implementations.",
+    "howItAffectsYourReach": "Evaluates advertiser handle exclusion lists and blocked keywords against candidate metadata, dropping or shifting ad positions accordingly.",
+    "theGoldenRule": "Avoid spammy keywords or advertiser blacklists to keep your content eligible for premium feed adjacency."
+  },
+  {
+    "path": "home-mixer/bin/pipeline_components_json.rs",
+    "inSimpleTerms": "A diagnostic CLI tool that inspects and exports the entire pipeline topology and component graph of Home Mixer into JSON format.",
+    "whyThisExists": "Provides automated introspection of candidate sources, hydrators, filters, and scorers for architectural audits and developer tooling.",
+    "howItAffectsYourReach": "Zero direct algorithmic impact; serves as the definitive structural schema of all ranking stages affecting reach.",
+    "theGoldenRule": "Inspect pipeline schemas to understand the exact lifecycle stages your posts traverse from retrieval to final display."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/ads_brand_safety_vf_hydrator.rs",
+    "inSimpleTerms": "This file queries Visibility Filtering and Brand Safety services to determine if an organic post is safe for ad adjacency. It tags candidates with brand suitability risk ratings.",
+    "whyThisExists": "Advertisers require verification that their promoted content does not appear next to toxic, controversial, or brand-unsafe organic posts.",
+    "howItAffectsYourReach": "Posts flagged as brand-unsafe are disqualified from ad-adjacent placement and may experience restricted algorithmic distribution.",
+    "theGoldenRule": "Adhere strictly to brand safety guidelines to ensure your posts remain eligible for monetizable timeline slots."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/bidirectional_follow_hydrator.rs",
+    "inSimpleTerms": "This file checks whether the viewing user and the post author follow each other mutually. It queries the social graph and attaches a bidirectional follow boolean flag to candidate posts.",
+    "whyThisExists": "Architected to identify high-trust mutual connections where content sharing and reply interactions carry stronger relationship signals.",
+    "howItAffectsYourReach": "Mutual follow status acts as a strong positive feature in downstream ranking models, increasing feed visibility.",
+    "theGoldenRule": "Build reciprocal relationships with peers and followers in your niche to unlock mutual-graph ranking advantages."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/blocked_by_hydrator.rs",
+    "inSimpleTerms": "This file checks whether the candidate post author has blocked the viewer, or vice versa. It annotates candidates with block relationship flags from the social graph.",
+    "whyThisExists": "Engineers built this to enforce strict user safety boundaries and privacy guarantees across all feed surfaces.",
+    "howItAffectsYourReach": "Identified blocked relationships result in immediate candidate eviction in downstream safety filters (100% reach drop).",
+    "theGoldenRule": "Maintain respectful discourse to avoid user blocks that sever social graph paths to potential audiences."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/broadcast_liveness_hydrator.rs",
+    "inSimpleTerms": "This file checks whether attached video streams, audio spaces, or broadcasts are currently live or ended. It updates candidate status with real-time broadcast state.",
+    "whyThisExists": "Engineers built this to give real-time priority to active live broadcasts and downrank or remove stale completed streams.",
+    "howItAffectsYourReach": "Active live status grants immediate real-time ranking boosts; ended broadcasts lose live-stream priority.",
+    "theGoldenRule": "Go live when target audiences are most active to take advantage of real-time broadcast discovery boosts."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/conversation_gap_ancestor_hydrator.rs",
+    "inSimpleTerms": "Hydrates missing root and ancestor posts for reply candidates to reconstruct cohesive conversation threads.",
+    "whyThisExists": "Replies cannot be properly evaluated or displayed in isolation; fetching root context is required for conversation grouping and ML scoring.",
+    "howItAffectsYourReach": "Ensures high-quality replies have their full parent thread attached, enabling them to be rendered as rich conversation modules rather than orphaned snippets.",
+    "theGoldenRule": "Write replies that add genuine insight to the root post to maximize conversation module ranking."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/core_data_candidate_hydrator.rs",
+    "inSimpleTerms": "This file fetches fundamental tweet metadata such as author ID, creation timestamp, reply status, and media attachments for candidate posts. It enriches raw candidate IDs with core entity attributes.",
+    "whyThisExists": "Candidates enter the pipeline as bare IDs; this hydrator provides the essential fields required by subsequent filters, ML models, and marshallers.",
+    "howItAffectsYourReach": "Candidates that fail core data lookup or are deleted/unavailable at fetch time are immediately dropped from the pipeline.",
+    "theGoldenRule": "Ensure original post content and media remain intact and uncorrupted upon publication."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/engagement_counts_hydrator.rs",
+    "inSimpleTerms": "This file fetches real-time engagement counts (likes, retweets, replies, quotes, bookmarks) for candidate posts from high-throughput cache layers. It enriches candidates with fresh social proof data.",
+    "whyThisExists": "Accurate engagement velocity calculation requires fresh, real-time counters rather than stale database snapshots.",
+    "howItAffectsYourReach": "Supplies dynamic numerical features directly into ranking models; rapid early engagement increases algorithmic momentum.",
+    "theGoldenRule": "Foster fast early engagement from your community immediately after posting to boost real-time velocity metrics."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/filtered_topics_hydrator.rs",
+    "inSimpleTerms": "This file attaches semantic topic classifications and user topic preferences to candidate posts. It determines which high-level interest taxonomy categories a post belongs to.",
+    "whyThisExists": "Built to enable topic-based retrieval, interest matching, and topic-level user preference filtering.",
+    "howItAffectsYourReach": "Aligns posts with topic clusters; allows posts to be recommended to users following specific topic channels.",
+    "theGoldenRule": "Keep posts focused on identifiable subject matters to ensure accurate topic categorization."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/following_replied_users_hydrator.rs",
+    "inSimpleTerms": "This file checks if people the viewing user follows have replied to or participated in the candidate post's conversation thread. It populates social context attributes.",
+    "whyThisExists": "X uses social proof (e.g., 'User A and User B replied') as a major relevance signal for ranking out-of-network content.",
+    "howItAffectsYourReach": "Provides a strong positive ranking multiplier when someone in the viewer's network engages in your post's discussion.",
+    "theGoldenRule": "Engage in prominent industry discussions where recognized peers can participate in your reply threads."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/gizmoduck_hydrator.rs",
+    "inSimpleTerms": "This file queries the Gizmoduck user service to fetch author profile attributes (verification status, safety labels, account age, subscriber status). It enriches candidates with author-level metadata.",
+    "whyThisExists": "Centralizes author profile feature hydration needed for verification badges, safety checks, and author-level ranking weights.",
+    "howItAffectsYourReach": "Supplies account verification and subscriber status features, which are positively weighted in ranking models.",
+    "theGoldenRule": "Maintain a verified, fully compliant account profile in good standing with safety systems."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/in_network_candidate_hydrator.rs",
+    "inSimpleTerms": "This file determines whether a post candidate originates from an account the viewer directly follows (in-network) or from external discovery (out-of-network). It annotates candidate network origin.",
+    "whyThisExists": "Required to separate in-network content pipelines from out-of-network recommendation flows and apply appropriate blending ratios.",
+    "howItAffectsYourReach": "Differentiates candidate scoring paths; in-network posts have lower retrieval score thresholds than out-of-network discovery candidates.",
+    "theGoldenRule": "Cultivate a core follower base to guarantee a stable baseline of in-network impressions."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/language_code_hydrator.rs",
+    "inSimpleTerms": "This file identifies and attaches the detected natural language code (e.g., 'en', 'es', 'ja') of the post's text. It provides linguistic metadata for filtering and matching.",
+    "whyThisExists": "Allows the recommendation engine to match candidate post language against the viewer's preferred consumption languages.",
+    "howItAffectsYourReach": "Downranks or filters out posts written in languages that do not match the viewer's language profile.",
+    "theGoldenRule": "Write consistently in your primary audience's language to maximize topic and language matching accuracy."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/media_info_hydrator.rs",
+    "inSimpleTerms": "This file extracts media entity details, including aspect ratios, image/video URLs, and media categories. It prepares visual asset metadata for model scoring and UI rendering.",
+    "whyThisExists": "Enables downstream models to predict visual media engagement and ensures client rendering components receive valid media payloads.",
+    "howItAffectsYourReach": "Posts containing rich, high-resolution media receive specific media-engagement model evaluations, increasing visual feed prominence.",
+    "theGoldenRule": "Attach native, correctly formatted images or videos to capitalize on visual media scoring heads."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/mod.rs",
+    "inSimpleTerms": "Module definition aggregating all candidate hydrators that enrich post candidates with metadata, features, and social context.",
+    "whyThisExists": "Provides a clean module interface for batching concurrent candidate feature hydration prior to filtering and scoring.",
+    "howItAffectsYourReach": "Coordinates the retrieval of all social graph, media, language, and engagement signals that ML models use for ranking.",
+    "theGoldenRule": "Complete candidate hydration ensures your post possesses all necessary ML features to compete in ranking stages."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/mutual_follow_jaccard_hydrator.rs",
+    "inSimpleTerms": "This file computes the Jaccard similarity coefficient between the viewer's follow graph and the author's follow graph. It measures the degree of mutual community overlap.",
+    "whyThisExists": "Engineers designed this metric to capture shared community context and niche affinity between two users.",
+    "howItAffectsYourReach": "High mutual-follow overlap provides a significant positive ranking boost in out-of-network recommendation scoring.",
+    "theGoldenRule": "Network with creators and audiences inside your specific subculture to increase mutual graph overlap."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/quote_hydrator.rs",
+    "inSimpleTerms": "This file hydrates metadata regarding the original post embedded inside a quote post. It retrieves quoted tweet author info, root tweet IDs, and engagement state.",
+    "whyThisExists": "Necessary to evaluate the quality, safety, and deduplication criteria of both the quoter's commentary and the referenced source post.",
+    "howItAffectsYourReach": "If the quoted tweet is deleted, NSFW-restricted, or authored by a blocked user, the quote post's downstream distribution may be suppressed.",
+    "theGoldenRule": "Quote-post authoritative, safe, and high-quality source posts to prevent parent-level filtering penalties."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/semantic_id_hydrator.rs",
+    "inSimpleTerms": "This file attaches semantic entity and topic IDs extracted from deep content understanding models. It categorizes candidates into fine-grained semantic clusters.",
+    "whyThisExists": "Allows semantic search, embedding retrieval, and SimClusters graph algorithms to index and match content conceptually.",
+    "howItAffectsYourReach": "Facilitates discovery in targeted interest clusters and semantic recommendation channels.",
+    "theGoldenRule": "Use clear, topic-specific terminology to help semantic classifiers index your content into relevant entity clusters."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/subscription_hydrator.rs",
+    "inSimpleTerms": "This file checks whether the viewing user has an active paid creator subscription to the post author. It attaches exclusive content entitlement flags.",
+    "whyThisExists": "Ensures subscriber-only exclusive posts are delivered to paying subscribers while gating non-subscribers.",
+    "howItAffectsYourReach": "Enables delivery of paywalled subscriber posts and boosts visibility among subscribed fans.",
+    "theGoldenRule": "Offer exclusive subscriber content to create high-affinity engagement hubs with your most dedicated followers."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/topic_feedback_context_hydrator.rs",
+    "inSimpleTerms": "This file evaluates past explicit user feedback on specific topics (such as 'Show less often' or topic follow states). It attaches user-topic affinity context to candidates.",
+    "whyThisExists": "Built to respect user customization and negative feedback controls regarding specific topical subjects.",
+    "howItAffectsYourReach": "Severely downranks or drops posts whose topic categories match topics the user has dismissed or disliked.",
+    "theGoldenRule": "Avoid spamming controversial or off-topic tags that may trigger user-level topic dismissals."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/tweet_type_metrics_hydrator.rs",
+    "inSimpleTerms": "This file categorizes whether a post is a root post, self-reply thread, standard reply, retweet, or quote. It attaches structural format features to candidates.",
+    "whyThisExists": "Different post types exhibit distinct engagement dynamics and require specialized weighting in ranking pipelines.",
+    "howItAffectsYourReach": "Feeds post structural type into ranking algorithms; original root posts typically receive preferential weighting over standalone replies.",
+    "theGoldenRule": "Prioritize original root posts and structured threads over fragmented standalone replies for broad discovery."
+  },
+  {
+    "path": "home-mixer/candidate_hydrators/vf_candidate_hydrator.rs",
+    "inSimpleTerms": "This file calls the Visibility Filtering (VF) service to check trust, safety, NSFW, and content policy flags. It enriches candidates with safety policy labels.",
+    "whyThisExists": "Engineers built this as the central enforcement integration for legal compliance, moderation rules, and platform safety policies.",
+    "howItAffectsYourReach": "Attaches safety labels that trigger hard drop filters or severe reach demotions (toxicity, NSFW out-of-network suppression).",
+    "theGoldenRule": "Strictly comply with platform rules to prevent safety flags that eliminate algorithmic recommendation."
+  },
+  {
+    "path": "home-mixer/candidate_pipeline/following_candidate_pipeline.rs",
+    "inSimpleTerms": "Assembles and executes the end-to-end retrieval, filtering, and blending pipeline for the standard Following feed.",
+    "whyThisExists": "Coordinates in-network source retrieval, social graph deduplication, and ad mixing into a unified pipeline flow.",
+    "howItAffectsYourReach": "Directly governs how posts from followed accounts are filtered and delivered to active followers.",
+    "theGoldenRule": "Foster direct follower relationships to guarantee recurring placement in the core Following feed."
+  },
+  {
+    "path": "home-mixer/candidate_pipeline/for_you_candidate_pipeline.rs",
+    "inSimpleTerms": "The master execution pipeline for the algorithmic 'For You' feed, chaining retrieval, heavy ML scoring, diversity filtering, and URT formatting.",
+    "whyThisExists": "Engineers constructed this pipeline to execute the full multi-stage recommendation workflow within strict ~100ms latency budgets.",
+    "howItAffectsYourReach": "Controls the entire viral discovery engine; posts that pass retrieval and rank high under Phoenix ML models achieve global reach.",
+    "theGoldenRule": "Optimize for multi-signal engagement (high replies, retweets, and dwell time) to survive aggressive candidate filtering in For You."
+  },
+  {
+    "path": "home-mixer/candidate_pipeline/mod.rs",
+    "inSimpleTerms": "Exports all pipeline configurations, server pipelines, and gRPC xDS service connectors for Home Mixer.",
+    "whyThisExists": "Provides a single entry point for pipeline composition and dynamic xDS load-balancing configurations across ML backends.",
+    "howItAffectsYourReach": "Defines the routing infrastructure that delivers candidate streams to ML inference clusters.",
+    "theGoldenRule": "Architectural stability at the pipeline root ensures predictable end-to-end candidate ranking."
+  },
+  {
+    "path": "home-mixer/candidate_pipeline/phoenix_candidate_pipeline.rs",
+    "inSimpleTerms": "Executes candidate retrieval and feature transformation specifically optimized for Phoenix neural network ranking.",
+    "whyThisExists": "Prepares dense candidate feature tensors and dispatches batch scoring requests to the Phoenix neural ranking cluster.",
+    "howItAffectsYourReach": "Computes the core multi-task engagement probabilities (P(like), P(retweet), P(reply), P(video)) that dominate For You ranking.",
+    "theGoldenRule": "Content that triggers immediate positive feedback loops receives the highest Phoenix neural prediction scores."
+  },
+  {
+    "path": "home-mixer/candidate_pipeline/phoenix_scores_pipeline.rs",
+    "inSimpleTerms": "A lightweight scoring-only pipeline that evaluates raw candidate lists against Phoenix models without UI marshalling.",
+    "whyThisExists": "Allows internal services to query Phoenix scoring models for candidate valuation without paying the overhead of feed layout construction.",
+    "howItAffectsYourReach": "Calculates raw engagement potential scores used in downstream notifications, explore tabs, and secondary surfaces.",
+    "theGoldenRule": "Maintain strong engagement quality to score high across both feed and auxiliary recommendation pipelines."
+  },
+  {
+    "path": "home-mixer/candidate_pipeline/ranked_following_candidate_pipeline.rs",
+    "inSimpleTerms": "Constructs the candidate pipeline for the ranked Following timeline, applying ML scoring specifically to in-network posts.",
+    "whyThisExists": "Provides an alternative to pure reverse-chronological order by surfacing the most engaging updates from followed accounts first.",
+    "howItAffectsYourReach": "Ranks followed creators by affinity and interaction likelihood, boosting close connections over inactive ones.",
+    "theGoldenRule": "Engage regularly with your core follower base to maintain top tier ranking in their ranked following feeds."
+  },
+  {
+    "path": "home-mixer/candidate_pipeline/reverse_chron_posts_pipeline.rs",
+    "inSimpleTerms": "Constructs the pure chronological timeline pipeline, retrieving recent in-network posts and ordering them strictly by creation time.",
+    "whyThisExists": "Fulfills the low-latency requirement for real-time, un-ranked follower updates without invoking heavy ML rankers.",
+    "howItAffectsYourReach": "Delivers posts directly based on publication timestamp, making posting schedule and follower active hours critical.",
+    "theGoldenRule": "Publish when your target audience is active to secure immediate top-of-feed visibility in chronological feeds."
+  },
+  {
+    "path": "home-mixer/clients/ad_index_client.rs",
+    "inSimpleTerms": "This file communicates with the Ad Index service to fetch targeted commercial ads for insertion into user timelines. It handles ad candidate retrieval.",
+    "whyThisExists": "Enables Home Mixer to retrieve relevant, targeted ad units that match the user's demographic and interest profile.",
+    "howItAffectsYourReach": "Governs sponsored ad inventory insertion, maintaining proper spacing alongside organic creator posts.",
+    "theGoldenRule": "Monetized and sponsored campaigns run through dedicated ad index channels alongside organic reach."
+  },
+  {
+    "path": "home-mixer/clients/engagement_counts_client.rs",
+    "inSimpleTerms": "This file queries the high-speed caching tier to fetch real-time engagement totals (favorites, retweets, replies, quotes). It retrieves live metrics.",
+    "whyThisExists": "Provides up-to-the-second engagement metrics to ranking models without overloading persistent database backends.",
+    "howItAffectsYourReach": "Rapid increases in engagement counts fetched by this client boost candidate velocity features in real-time rankers.",
+    "theGoldenRule": "Spark immediate engagement when you post to generate strong real-time velocity signals."
+  },
+  {
+    "path": "home-mixer/clients/engagement_signals_client.rs",
+    "inSimpleTerms": "This file queries the Engagement Signals service to retrieve rich historical interaction patterns between users and content categories. It fetches user behavioral signals.",
+    "whyThisExists": "Provides fine-grained implicit and explicit engagement history used by heavy ML ranking models to personalize recommendations.",
+    "howItAffectsYourReach": "Matches your post's topic and author profile against the viewer's historical engagement affinities.",
+    "theGoldenRule": "Build a consistent content niche so that users with matching historical interest signals consistently receive your posts."
+  },
+  {
+    "path": "home-mixer/clients/gizmoduck_client.rs",
+    "inSimpleTerms": "This file interfaces with the Gizmoduck user profile service to retrieve author account metadata, verification levels, and safety flags. It fetches user profiles.",
+    "whyThisExists": "Provides author-level features necessary for ranking models, badge hydration, and account-level safety evaluations.",
+    "howItAffectsYourReach": "Account verification status and positive standing retrieved from Gizmoduck provide ranking advantages in candidate scoring.",
+    "theGoldenRule": "Keep your account verified and maintain a clean profile standing to ensure top-tier feature weighting."
+  },
+  {
+    "path": "home-mixer/clients/impressed_posts_client.rs",
+    "inSimpleTerms": "This file queries the distributed impression cache to retrieve posts the user has recently viewed. It supplies impression history for deduplication.",
+    "whyThisExists": "Enables real-time filtering of previously seen posts across multiple client devices and sessions.",
+    "howItAffectsYourReach": "Supplies the list of post IDs to be filtered out, preventing repeat delivery of already seen posts.",
+    "theGoldenRule": "Deliver high value immediately on the first impression, as users will not be served the same post twice in For You."
+  },
+  {
+    "path": "home-mixer/clients/mod.rs",
+    "inSimpleTerms": "Aggregates and exports all downstream RPC and gRPC clients used by Home Mixer to communicate with X backend services.",
+    "whyThisExists": "Provides centralized client lifecycle management, connection pooling, and circuit breaking across microservices.",
+    "howItAffectsYourReach": "Ensures uninterrupted access to user data, social graphs, ML models, and candidate caches.",
+    "theGoldenRule": "High availability across internal backend clients ensures that all creator signals are accurately retrieved and evaluated."
+  },
+  {
+    "path": "home-mixer/clients/night_owl_client.rs",
+    "inSimpleTerms": "This file connects to the Night Owl in-network search engine to retrieve recent posts from followed accounts. It fetches in-network candidates.",
+    "whyThisExists": "Provides ultra-low-latency in-network post candidate retrieval for Following feeds and in-network blending stages.",
+    "howItAffectsYourReach": "Direct retrieval bridge to your followers; ensures your new posts enter your followers' initial candidate pools.",
+    "theGoldenRule": "Post during active follower hours so your content is fresh in Night Owl retrieval queries."
+  },
+  {
+    "path": "home-mixer/clients/past_request_timestamps_client.rs",
+    "inSimpleTerms": "This file fetches the history of a user's recent app request timestamps. It provides session frequency and inter-request timing data.",
+    "whyThisExists": "Allows scoring models to calculate session gap features and adjust freshness weighting based on user visit frequency.",
+    "howItAffectsYourReach": "Influences how aggressively fresh content is favored over older top-scoring content for frequent vs infrequent visitors.",
+    "theGoldenRule": "A steady publishing cadence ensures you have fresh content available whenever users open the app."
+  },
+  {
+    "path": "home-mixer/clients/prompts_client.rs",
+    "inSimpleTerms": "This file queries the Prompts service to fetch context-relevant UI cards, announcements, and follow recommendations. It retrieves prompt units.",
+    "whyThisExists": "Supplies interactive platform cards and nudges tailored to the user's current account state and activity.",
+    "howItAffectsYourReach": "Manages platform prompt modules; does not directly alter organic post scoring.",
+    "theGoldenRule": "Take advantage of platform campaigns and features highlighted in prompt cards to boost profile visibility."
+  },
+  {
+    "path": "home-mixer/clients/resurrection_date_client.rs",
+    "inSimpleTerms": "This file retrieves account reactivation ('resurrection') dates for returning users who were inactive for extended periods. It supplies user lifecycle context.",
+    "whyThisExists": "Helps models apply specialized cold-start and re-onboarding scoring adjustments for users returning after long absences.",
+    "howItAffectsYourReach": "Reactivated users receive high-reputation, broadly engaging content to re-establish their interest profile.",
+    "theGoldenRule": "Creating broadly appealing, high-reputation evergreen content helps you get recommended to returning resurrected users."
+  },
+  {
+    "path": "home-mixer/clients/rotating_channel.rs",
+    "inSimpleTerms": "This file provides connection pooling and round-robin gRPC channel rotation across backend server instances. It manages transport-level load balancing.",
+    "whyThisExists": "Prevents hotspotting and socket exhaustion when making high-throughput RPC calls to core microservices.",
+    "howItAffectsYourReach": "Ensures uninterrupted pipeline throughput and minimal latency during peak traffic events.",
+    "theGoldenRule": "Platform infrastructure scale guarantees that viral content spikes are handled smoothly without dropped evaluations."
+  },
+  {
+    "path": "home-mixer/clients/s2s.rs",
+    "inSimpleTerms": "This file manages Service-to-Service (S2S) mutual TLS authentication and security tokens for internal microservice calls. It secures internal RPCs.",
+    "whyThisExists": "Enforces strict zero-trust security policies and encryption across all internal microservice boundaries.",
+    "howItAffectsYourReach": "Guarantees secure and compliant processing of user data and creator content across backend services.",
+    "theGoldenRule": "System security protocols safeguard your account credentials and engagement telemetry against tampering."
+  },
+  {
+    "path": "home-mixer/clients/served_history_client.rs",
+    "inSimpleTerms": "This file interfaces with the persistent Served History storage layer to query and update posts previously served to a user. It tracks served post state.",
+    "whyThisExists": "Provides the persistent storage backend for cross-session deduplication, preventing users from seeing repeat posts.",
+    "howItAffectsYourReach": "Supplies historical served records that drop previously served posts from future candidate generation cycles.",
+    "theGoldenRule": "Focus on publishing new content continuously to stay active in candidate generation streams."
+  },
+  {
+    "path": "home-mixer/clients/simclusters_ann_client.rs",
+    "inSimpleTerms": "This file connects to the SimClusters Approximate Nearest Neighbor (ANN) service to retrieve candidates based on community embedding similarity. It fetches cluster candidates.",
+    "whyThisExists": "Enables fast vector search across billions of candidate posts mapped into community interest spaces.",
+    "howItAffectsYourReach": "Core engine for interest-based virality; matches your post with users who share community embedding affinities.",
+    "theGoldenRule": "Cultivate a focused audience niche to establish clear cluster embeddings that SimClusters ANN can match efficiently."
+  },
+  {
+    "path": "home-mixer/clients/tweet_entity_service_client.rs",
+    "inSimpleTerms": "This file queries the Tweet Entity Service to fetch semantic entities, hashtags, mentions, and media metadata for posts. It enriches candidate entities.",
+    "whyThisExists": "Supplies detailed natural language understanding and entity classification features to ranking and topic models.",
+    "howItAffectsYourReach": "Accurate entity extraction allows your posts to qualify for specific topic channels and interest-based recommendations.",
+    "theGoldenRule": "Mention clear, recognized entities and subject keywords to ensure precise semantic indexing."
+  },
+  {
+    "path": "home-mixer/clients/uas_fetcher.rs",
+    "inSimpleTerms": "This file interfaces with the User Action Service (UAS) to fetch real-time user action streams (recent likes, retweets, replies). It retrieves user activity logs.",
+    "whyThisExists": "Provides real-time user context so ranking models can immediately adapt recommendations to what the user just engaged with.",
+    "howItAffectsYourReach": "If a user engages with your content, UAS immediately boosts the relevance of your other posts and related topics for that user.",
+    "theGoldenRule": "Encourage multi-post engagement; an initial like triggers UAS to immediately surface more of your content to that user."
+  },
+  {
+    "path": "home-mixer/clients/user_action_aggregation_client.rs",
+    "inSimpleTerms": "This file retrieves aggregated historical user engagement statistics across various time windows. It supplies long-term author and user interaction statistics.",
+    "whyThisExists": "Provides long-term affinity features (e.g., author-viewer historical engagement rates) to machine learning ranking models.",
+    "howItAffectsYourReach": "High historical engagement rates between a viewer and an author produce strong positive multipliers in downstream rankers.",
+    "theGoldenRule": "Build loyal follower relationships to maximize long-term user-action affinity weights."
+  },
+  {
+    "path": "home-mixer/clients/vm_ranker_client.rs",
+    "inSimpleTerms": "This file manages gRPC communications with the Value Model Ranker service. It sends candidate batches and receives predicted engagement probabilities.",
+    "whyThisExists": "Executes external high-capacity ML ranking inference on candidate posts using rich user and candidate feature vectors.",
+    "howItAffectsYourReach": "Directly fetches the core interaction probabilities (P(like), P(retweet), P(reply)) that determine timeline sorting.",
+    "theGoldenRule": "Optimize for meaningful, multi-action user engagement to drive high Value Model probability scores."
+  },
+  {
+    "path": "home-mixer/clients/who_to_follow_client.rs",
+    "inSimpleTerms": "This file queries the Who-To-Follow service to fetch candidate accounts recommended for the user to follow. It retrieves recommended user profiles.",
+    "whyThisExists": "Powers creator discovery and social graph expansion by generating personalized account recommendations.",
+    "howItAffectsYourReach": "Enables your account profile to be displayed in follow recommendation units across the platform.",
+    "theGoldenRule": "Maintain high engagement and clear niche authority to be selected as a recommended account in your field."
+  },
+  {
+    "path": "home-mixer/config.rs",
+    "inSimpleTerms": "Defines global runtime configuration parameters, service endpoints, timeout budgets, and feature flags for Home Mixer.",
+    "whyThisExists": "Allows dynamic operational tuning of latency deadlines, candidate batch sizes, and microservice endpoints without code recompilation.",
+    "howItAffectsYourReach": "Enforces strict timeout deadlines (e.g., ~100ms total budget); candidate sources that exceed latency limits get dropped.",
+    "theGoldenRule": "High-performing candidate sources with fast response times consistently beat slower auxiliary sources into the ranking pool."
+  },
+  {
+    "path": "home-mixer/dark_traffic_setup.rs",
+    "inSimpleTerms": "Configures dark traffic shadowing and canary replay mechanisms for safe testing of candidate pipelines.",
+    "whyThisExists": "Enables engineers to mirror live production traffic to experimental clusters to test ranking models without affecting user experience.",
+    "howItAffectsYourReach": "Validates new ranking algorithms and parameter changes against real traffic before they go live platform-wide.",
+    "theGoldenRule": "Algorithmic updates undergo rigorous dark traffic testing before rolling out to influence global reach."
+  },
+  {
+    "path": "home-mixer/filters/ad_adjacent_served_filter.rs",
+    "inSimpleTerms": "This file checks recent ad placements and prevents serving organic candidates that violate ad adjacency safety rules. It coordinates organic-ad separation.",
+    "whyThisExists": "Guarantees brand safety by maintaining required slot buffers between sensitive organic topics and commercial advertisements.",
+    "howItAffectsYourReach": "Temporarily shifts or drops an organic candidate from an ad-adjacent position if brand safety rules conflict.",
+    "theGoldenRule": "Safe, family-friendly, and educational content enjoys frictionless placement adjacent to high-value ad inventory."
+  },
+  {
+    "path": "home-mixer/filters/age_filter.rs",
+    "inSimpleTerms": "This file removes candidate posts that exceed a configurable maximum age threshold (e.g., older than 24-48 hours). It enforces temporal freshness across timelines.",
+    "whyThisExists": "X timelines prioritize real-time discourse; stale posts consume ranking compute and degrade user experience.",
+    "howItAffectsYourReach": "Hard drop: any post older than the configured age limit is 100% eliminated from recommendation consideration.",
+    "theGoldenRule": "Publish regularly because post discoverability drops to zero once the post exceeds the maximum timeline freshness window."
+  },
+  {
+    "path": "home-mixer/filters/ancillary_vf_filter.rs",
+    "inSimpleTerms": "This file applies secondary visibility filtering rules to auxiliary post elements like quoted tweets, parent replies, and attached cards. It ensures embedded elements also meet safety standards.",
+    "whyThisExists": "Prevents circumventing safety rules through quoting or attaching unsafe secondary media and posts.",
+    "howItAffectsYourReach": "If an attached quote or media item violates safety policies, the parent post is filtered or stripped of reach.",
+    "theGoldenRule": "Avoid quoting or amplifying toxic or rule-violating accounts to protect your own post's algorithmic safety score."
+  },
+  {
+    "path": "home-mixer/filters/author_socialgraph_filter.rs",
+    "inSimpleTerms": "This file filters out posts from authors whom the viewing user has blocked, muted, or marked as spam. It enforces social graph privacy boundaries.",
+    "whyThisExists": "Guarantees user safety and preference enforcement by pruning unwanted author interactions at the pipeline level.",
+    "howItAffectsYourReach": "Hard drop: completely eliminates candidate posts if any block, mute, or abuse relationship exists with the viewer.",
+    "theGoldenRule": "Foster a positive community reputation to minimize user mutes and blocks that permanently close distribution channels."
+  },
+  {
+    "path": "home-mixer/filters/core_data_hydration_filter.rs",
+    "inSimpleTerms": "This file drops any candidate post that failed to successfully hydrate its core data attributes (e.g., missing author, deleted tweet). It cleanses invalid candidates.",
+    "whyThisExists": "Prevents downstream null-pointer exceptions and UI rendering errors caused by incomplete tweet data.",
+    "howItAffectsYourReach": "Hard drop for corrupt or missing candidates.",
+    "theGoldenRule": "Ensure posts are published cleanly without third-party API integration errors or instant deletions."
+  },
+  {
+    "path": "home-mixer/filters/dedup_conversation_filter.rs",
+    "inSimpleTerms": "This file ensures that only one post from a given conversation thread is selected for a single feed response. It prevents a single conversation from monopolizing the timeline.",
+    "whyThisExists": "Architected to promote conversation diversity across the user's home timeline.",
+    "howItAffectsYourReach": "If multiple replies from the same thread qualify, only the top-scoring candidate is served, dropping the others for that session.",
+    "theGoldenRule": "When participating in conversations, focus your energy on one exceptional, high-impact reply rather than multiple scattered comments."
+  },
+  {
+    "path": "home-mixer/filters/drop_duplicates_filter.rs",
+    "inSimpleTerms": "This file removes duplicate instances of the same post candidate from a candidate batch. It ensures unique post representation in the response.",
+    "whyThisExists": "Candidates may be fetched concurrently from multiple retrieval sources (e.g., SimClusters, Thunder, Phoenix); deduplication prevents UI rendering anomalies.",
+    "howItAffectsYourReach": "Keeps the highest-ranked copy of a post and discards redundant duplicates with zero net loss of reach.",
+    "theGoldenRule": "Do not repost identical content in rapid succession; duplicate entries are collapsed."
+  },
+  {
+    "path": "home-mixer/filters/following_retweet_deduplication_filter.rs",
+    "inSimpleTerms": "This file specifically deduplicates retweets within the Following feed pipeline. It ensures that multiple followers retweeting the same post results in only one timeline entry.",
+    "whyThisExists": "Keeps the Following feed clean and diverse when major viral events prompt mass retweets across a user's network.",
+    "howItAffectsYourReach": "Displays one instance of the retweeted post with social proof context (e.g., 'Retweeted by X and 3 others').",
+    "theGoldenRule": "Create shareable content that multiple influencers retweet, multiplying social proof on your single timeline entry."
+  },
+  {
+    "path": "home-mixer/filters/ineligible_subscription_filter.rs",
+    "inSimpleTerms": "This file drops paid subscriber-only post candidates if the viewing user does not hold an active subscription to the creator. It enforces paywall boundaries.",
+    "whyThisExists": "Protects monetized creator content by ensuring private subscriber posts are not leaked to non-paying users.",
+    "howItAffectsYourReach": "Excludes subscriber-only posts from non-subscribers while serving them to verified subscribers.",
+    "theGoldenRule": "Use public posts for audience growth and exclusive subscriber posts for subscriber retention and monetization."
+  },
+  {
+    "path": "home-mixer/filters/invalid_conversation_module_filter.rs",
+    "inSimpleTerms": "This file validates the structural completeness of conversation modules (e.g., parent-reply pairs). It drops conversation clusters that have missing parent posts.",
+    "whyThisExists": "Prevents broken conversation UI units where a reply is displayed without its requisite contextual parent.",
+    "howItAffectsYourReach": "Drops reply candidates if their parent post has been deleted or cannot be resolved.",
+    "theGoldenRule": "Reply to active, stable posts to ensure your contribution remains eligible for conversation module rendering."
+  },
+  {
+    "path": "home-mixer/filters/inventory_holdout_filter.rs",
+    "inSimpleTerms": "This file reserves and drops a deterministic percentage of candidates for experimentation and baseline holdout analysis. It supports scientific A/B testing.",
+    "whyThisExists": "Allows ML engineers to measure organic algorithm lift against unranked or held-out control groups.",
+    "howItAffectsYourReach": "A small randomized sample of queries drops specific candidates to maintain experimental control groups.",
+    "theGoldenRule": "Consistent, sustained engagement over time overrides minor statistical holdout variance."
+  },
+  {
+    "path": "home-mixer/filters/mod.rs",
+    "inSimpleTerms": "Module declaration aggregating all safety, deduplication, visibility, and quality filters in Home Mixer.",
+    "whyThisExists": "Organizes multi-stage candidate filtering into modular predicates executed before and after ML ranking.",
+    "howItAffectsYourReach": "Coordinates the pruning of hundreds of invalid, duplicate, muted, or unsafe candidate posts from the scoring pool.",
+    "theGoldenRule": "Ensure your posts pass all safety and policy filters so they remain in the candidate set for final ML scoring."
+  },
+  {
+    "path": "home-mixer/filters/muted_keyword_filter.rs",
+    "inSimpleTerms": "This file filters out posts containing words, phrases, or hashtags that the viewing user has explicitly muted. It enforces personal content filtering preferences.",
+    "whyThisExists": "Empowers users with granular controls to suppress specific topics, spoilers, or unwanted vocabulary from their feeds.",
+    "howItAffectsYourReach": "Hard drop: if your post contains a muted keyword for a given user, it is 100% hidden from that user's timeline.",
+    "theGoldenRule": "Avoid spammy, overused buzzwords or controversial keywords that users frequently add to their muted lists."
+  },
+  {
+    "path": "home-mixer/filters/new_user_min_engagement_filter.rs",
+    "inSimpleTerms": "This file requires out-of-network candidate posts shown to newly registered users to meet strict minimum engagement thresholds. It curates a high-quality onboarding experience.",
+    "whyThisExists": "New users lack established interest graphs; serving high-engagement, vetted content prevents bad initial onboarding impressions.",
+    "howItAffectsYourReach": "Drops low-engagement out-of-network posts from candidate pools served to new accounts.",
+    "theGoldenRule": "Achieve broad social proof and high engagement to be eligible for distribution to newly registered user cohorts."
+  },
+  {
+    "path": "home-mixer/filters/oon_nsfw_simclusters_filter.rs",
+    "inSimpleTerms": "This file filters out adult/NSFW content retrieved through out-of-network SimClusters discovery. It prevents explicit content from appearing in general recommendation feeds.",
+    "whyThisExists": "Enforces safe discovery boundaries by blocking out-of-network NSFW content from spreading algorithmically to non-consenting users.",
+    "howItAffectsYourReach": "Hard drop in out-of-network discovery pools for any post tagged with NSFW/adult flags.",
+    "theGoldenRule": "If producing sensitive or adult content, expect reach to be strictly confined to direct followers."
+  },
+  {
+    "path": "home-mixer/filters/oon_retweet_reply_filter.rs",
+    "inSimpleTerms": "This file filters out out-of-network retweets and replies that lack sufficient standalone context. It restricts recommendation feeds to high-context standalone posts.",
+    "whyThisExists": "Recommending an out-of-network reply without parent context often confuses viewers and creates low-quality recommendations.",
+    "howItAffectsYourReach": "Drops out-of-network replies unless they meet strict quality, engagement, or conversation-module criteria.",
+    "theGoldenRule": "Focus on high-value original root posts when targeting out-of-network audience growth rather than isolated replies."
+  },
+  {
+    "path": "home-mixer/filters/popular_topics_author_dedup_filter.rs",
+    "inSimpleTerms": "This file limits the number of posts from the same author within popular topic modules. It ensures diverse author representation in topic feeds.",
+    "whyThisExists": "Prevents single prolific creators from dominating topic-specific discovery shelves.",
+    "howItAffectsYourReach": "Caps the number of posts an author can have simultaneously in a topic module, demoting or dropping excess posts.",
+    "theGoldenRule": "Space out your high-performing topic-specific posts rather than publishing multiple updates to the same topic simultaneously."
+  },
+  {
+    "path": "home-mixer/filters/previously_seen_posts_backup_filter.rs",
+    "inSimpleTerms": "This file acts as a fallback impression filter when the primary impression history store is unavailable or degraded. It uses local or secondary impression caches to drop seen posts.",
+    "whyThisExists": "Engineers built this redundancy to maintain feed freshness even during backend distributed cache outages.",
+    "howItAffectsYourReach": "Drops previously viewed posts from candidate pools during primary cache failovers.",
+    "theGoldenRule": "Continually publish fresh content to stay discoverable across session refreshes under all infrastructure conditions."
+  },
+  {
+    "path": "home-mixer/filters/previously_seen_posts_filter.rs",
+    "inSimpleTerms": "This file removes posts that the user has already viewed in recent feed sessions. It checks candidate IDs against the user's impression history.",
+    "whyThisExists": "Prevents feed stagnation by ensuring users are continuously presented with fresh, unconsumed content on every refresh.",
+    "howItAffectsYourReach": "Hard drop: once a user impressions your post, it will not be shown to them again in subsequent For You refreshes.",
+    "theGoldenRule": "Capture user engagement on their very first impression, as you will not get a second chance with the same user on that post."
+  },
+  {
+    "path": "home-mixer/filters/previously_served_posts_filter.rs",
+    "inSimpleTerms": "This file filters out posts that were successfully served in recent server responses within a short time window. It prevents rapid repetition across back-to-back pagination calls.",
+    "whyThisExists": "Solves race conditions and duplicate delivery when users trigger rapid refresh or pagination requests.",
+    "howItAffectsYourReach": "Temporarily excludes recently served candidates from immediate subsequent response pages.",
+    "theGoldenRule": "Rely on an ongoing stream of updates rather than expecting repeat impressions on a single served tweet."
+  },
+  {
+    "path": "home-mixer/filters/push_to_home_dedup_filter.rs",
+    "inSimpleTerms": "This file deduplicates posts that were recently delivered via Push Notifications against posts appearing in the Home feed. It avoids repetitive exposure.",
+    "whyThisExists": "If a user tapped a push notification to read a post, serving that exact same post at the top of their Home feed is redundant.",
+    "howItAffectsYourReach": "Filters out the notified post from the immediate home feed if the user recently engaged with the notification.",
+    "theGoldenRule": "Push notification engagement drives immediate visits; subsequent home feed refreshes will showcase your other updates."
+  },
+  {
+    "path": "home-mixer/filters/result_size_filter.rs",
+    "inSimpleTerms": "This file enforces upper bounds on the candidate list size before passing candidates to downstream ranking stages. It truncates excess candidates.",
+    "whyThisExists": "Protects downstream ML scoring services from latency spikes and memory overload by capping maximum batch sizes.",
+    "howItAffectsYourReach": "Candidates that rank below the pipeline's maximum batch cutoff are truncated prior to final scoring.",
+    "theGoldenRule": "High retrieval relevance scores are essential to make the top-N candidate cutoff before heavy ranking stages."
+  },
+  {
+    "path": "home-mixer/filters/retweet_deduplication_filter.rs",
+    "inSimpleTerms": "This file removes duplicate retweets of the same underlying post if the original post or another retweet is already in the candidate list. It collapses redundant social signals.",
+    "whyThisExists": "Prevents timelines from being dominated by multiple retweets of the same popular post from different followed accounts.",
+    "howItAffectsYourReach": "Consolidates retweets into a single candidate display entry, attributing reach to the original root post.",
+    "theGoldenRule": "Original posts gain cumulative distribution as retweets reinforce the single canonical post instance."
+  },
+  {
+    "path": "home-mixer/filters/self_reply_chain_filter.rs",
+    "inSimpleTerms": "This file regulates the display of long self-reply chains and threads in recommendation candidate pools. It ensures only the thread root or designated leading update is surfaced.",
+    "whyThisExists": "Prevents fragmented middle-thread replies from cluttering algorithmic feeds without parent context.",
+    "howItAffectsYourReach": "Suppresses intermediate self-replies from out-of-network recommendation while preserving root thread visibility.",
+    "theGoldenRule": "Make the first tweet of a thread the most compelling hook, as it carries the algorithmic distribution for the entire thread."
+  },
+  {
+    "path": "home-mixer/filters/self_tweet_filter.rs",
+    "inSimpleTerms": "This file removes the viewing user's own posts from their recommendation feed. It prevents self-recommendations in For You timelines.",
+    "whyThisExists": "Users do not need algorithmic recommendation of their own content in their personal discovery feeds.",
+    "howItAffectsYourReach": "Zero effect on external reach; simply excludes author's own posts from their private viewer feed.",
+    "theGoldenRule": "Evaluate your post reach and engagement via analytics dashboards rather than your personal home feed."
+  },
+  {
+    "path": "home-mixer/filters/topic_ids_filter.rs",
+    "inSimpleTerms": "This file filters out posts belonging to topics that the user has explicitly unfollowed or muted. It applies user topic settings directly to candidate streams.",
+    "whyThisExists": "Ensures algorithmic topic-based candidate generation adheres to explicit user topic opt-outs.",
+    "howItAffectsYourReach": "Drops candidate posts mapped to muted topic IDs for relevant users.",
+    "theGoldenRule": "Ensure your content accurately represents its core topic without attempting to trick unrelated topic classifiers."
+  },
+  {
+    "path": "home-mixer/filters/vf_filter.rs",
+    "inSimpleTerms": "This file executes the final filtering decisions provided by the Visibility Filtering service. It drops posts flagged for hate speech, severe policy violations, or restricted safety labels.",
+    "whyThisExists": "Serves as the definitive platform safety gate before posts can be marshalled into user-visible timelines.",
+    "howItAffectsYourReach": "Hard drop: non-compliant posts are completely removed from all feeds (reach drops to 0).",
+    "theGoldenRule": "Strictly abide by community guidelines to prevent automated safety system takedowns."
+  },
+  {
+    "path": "home-mixer/filters/video_filter.rs",
+    "inSimpleTerms": "This file filters video posts based on video playback readiness, format compatibility, and media safety rules. It ensures invalid or broken media candidates are excluded.",
+    "whyThisExists": "Prevents client playback crashes and guarantees video candidates meet technical playback standards.",
+    "howItAffectsYourReach": "Discards candidate posts with unencoded, corrupted, or incompatible video streams.",
+    "theGoldenRule": "Upload high-quality, fully processed video files that conform to platform encoding standards."
+  },
+  {
+    "path": "home-mixer/following_feed_server.rs",
+    "inSimpleTerms": "This file handles the reverse-chronological and standard following timeline requests. It pulls candidate posts exclusively from accounts the user follows and orders them with minimal algorithmic alteration.",
+    "whyThisExists": "Built to satisfy the requirement for an unfiltered, real-time stream of in-network creator updates without heavy ML engagement re-weighting.",
+    "howItAffectsYourReach": "Direct 1:1 delivery to followers; reach is determined by post recency and follower activity rather than out-of-network ML recommendation scores.",
+    "theGoldenRule": "Post when your followers are actively online to maximize top-of-feed visibility in chronological feeds."
+  },
+  {
+    "path": "home-mixer/for_you_server.rs",
+    "inSimpleTerms": "This file powers the main algorithm-driven 'For You' timeline. It coordinates candidate query hydration, source retrieval, multi-stage filtering, ML scoring, and final response marshalling for algorithmic feeds.",
+    "whyThisExists": "X engineers designed this server to assemble hundreds of out-of-network and in-network posts into a personalized, ranked feed within low-latency service-level agreements.",
+    "howItAffectsYourReach": "Controls the ultimate entry point for viral distribution; all heavy ML ranking models (Phoenix, VM Ranker) and deduplication filters execute across posts passing through this pipeline.",
+    "theGoldenRule": "Optimize for viral engagement metrics (replies, reposts, dwell time) to survive aggressive candidate pruning in the For You pipeline."
+  },
+  {
+    "path": "home-mixer/frames/catalog.rs",
+    "inSimpleTerms": "Defines the catalog of UI Frame templates and rich module layouts that can be inserted into user feeds.",
+    "whyThisExists": "Provides structured schemas for non-standard timeline elements like Grok summaries, topic carousels, and media banners.",
+    "howItAffectsYourReach": "Enables eligible content to be showcased in highlighted UI frames, boosting visual prominence and click-through rates.",
+    "theGoldenRule": "Format content with rich media and topic tags to qualify for specialized timeline frame catalog placements."
+  },
+  {
+    "path": "home-mixer/frames/mod.rs",
+    "inSimpleTerms": "Module definition for feed frames, coordinating UI layout planning, catalog schemas, and frame placement algorithms.",
+    "whyThisExists": "Encapsulates modular frame injection logic, separating timeline visual structuring from core post ranking.",
+    "howItAffectsYourReach": "Determines how and when featured content frames are blended into the organic post stream.",
+    "theGoldenRule": "Produce high-affinity thematic content that fits into curated feed frame categories."
+  },
+  {
+    "path": "home-mixer/frames/placement.rs",
+    "inSimpleTerms": "Calculates feed placement indices and spacing intervals for rich media frames and interactive modules.",
+    "whyThisExists": "Prevents visual clutter by enforcing strict spacing rules between standard post items and large UI frames.",
+    "howItAffectsYourReach": "Positions interactive modules at optimal feed depths, ensuring organic posts remain prominently readable.",
+    "theGoldenRule": "High organic ranking ensures your posts appear directly above or below high-engagement interactive frames."
+  },
+  {
+    "path": "home-mixer/frames/plan.rs",
+    "inSimpleTerms": "Constructs the execution plan for frame selection, matching user preferences against candidate frame templates.",
+    "whyThisExists": "Dynamically selects which interactive frames (e.g., trending topics or live spaces) to display for a given user query.",
+    "howItAffectsYourReach": "Connects trending creator posts to contextually relevant topic frames served in the timeline.",
+    "theGoldenRule": "Participate in trending discussions to be captured by automated topic frame generation plans."
+  },
+  {
+    "path": "home-mixer/frames/served.rs",
+    "inSimpleTerms": "Tracks and records served frame impressions to prevent redundant frame display across successive feed requests.",
+    "whyThisExists": "Maintains timeline freshness by ensuring users do not see the same interactive frame repeatedly in a short session window.",
+    "howItAffectsYourReach": "Rotates frame opportunities across diverse creators and topics on subsequent page refreshes.",
+    "theGoldenRule": "Consistently publish fresh content to capture rotation slots across newly planned frame impressions."
+  },
+  {
+    "path": "home-mixer/lib.rs",
+    "inSimpleTerms": "The root library crate definition for Home Mixer, declaring all public modules, configuration structs, and server exports.",
+    "whyThisExists": "Serves as the central compilation unit connecting candidate pipelines, ML scorers, hydrators, and gRPC endpoints.",
+    "howItAffectsYourReach": "Unifies all candidate retrieval, ranking, and filtering systems into a single high-performance executable.",
+    "theGoldenRule": "Understanding the modular architecture of Home Mixer reveals how various scoring and filtering subsystems interact to determine reach."
+  },
+  {
+    "path": "home-mixer/main.rs",
+    "inSimpleTerms": "The binary entry point for the Home Mixer service, parsing CLI arguments, initializing tracing, and launching gRPC servers.",
+    "whyThisExists": "Bootstraps the service process, configures thread pools, shard coordinates, telemetry listeners, and network ports.",
+    "howItAffectsYourReach": "Ensures the distributed service cluster is online, healthy, and processing millions of recommendation requests per second.",
+    "theGoldenRule": "System reliability and uptime at the service layer guarantee uninterrupted global distribution for creator posts."
+  },
+  {
+    "path": "home-mixer/models/brand_safety.rs",
+    "inSimpleTerms": "This file defines data models and rating structures for brand safety evaluations and ad adjacency suitability. It structures brand risk ratings.",
+    "whyThisExists": "Allows the recommendation and monetization engines to classify and handle content according to industry brand safety standards.",
+    "howItAffectsYourReach": "High brand risk flags disqualify content from appearing near ads and restrict algorithmic discovery distribution.",
+    "theGoldenRule": "Avoid toxic or advertiser-unfriendly themes to maintain full monetization and recommendation eligibility."
+  },
+  {
+    "path": "home-mixer/models/candidate.rs",
+    "inSimpleTerms": "This file defines the primary Candidate data structure that represents a post throughout the entire Home Mixer pipeline. It holds candidate IDs, scores, features, and metadata.",
+    "whyThisExists": "Serves as the core data model passed between candidate sources, hydrators, filters, scorers, and selectors.",
+    "howItAffectsYourReach": "Encapsulates all scoring signals, multipliers, and filter flags that dictate whether a post survives to the final timeline.",
+    "theGoldenRule": "Every aspect of your post\u2014media, text, engagement, author status\u2014is tracked in the candidate model to compute your reach."
+  },
+  {
+    "path": "home-mixer/models/candidate_features.rs",
+    "inSimpleTerms": "This file defines data models for all extracted post-level candidate features, including engagement metrics, media flags, and safety labels. It organizes post features.",
+    "whyThisExists": "Provides a standardized feature schema used by scoring algorithms and machine learning inference clients.",
+    "howItAffectsYourReach": "Populates the feature inputs evaluated by neural scoring models; higher positive feature values yield higher reach.",
+    "theGoldenRule": "Create high-quality posts with complete metadata and rich media to maximize candidate feature scores."
+  },
+  {
+    "path": "home-mixer/models/engagement_signals.rs",
+    "inSimpleTerms": "This file defines data models for implicit and explicit user engagement signals, dwell times, and click patterns. It models interaction behavior.",
+    "whyThisExists": "Standardizes how user interaction histories are structured and passed into ranking models.",
+    "howItAffectsYourReach": "Provides the mathematical signals (e.g., historical dwell time and reply rates) used to compute author affinity boosts.",
+    "theGoldenRule": "Deliver content that hooks viewers and maximizes dwell time to strengthen your positive engagement signals."
+  },
+  {
+    "path": "home-mixer/models/in_network_reply.rs",
+    "inSimpleTerms": "This file defines data structures representing in-network replies, conversation relationships, and thread context. It structures reply candidates.",
+    "whyThisExists": "Enables specialized handling, filtering, and scoring of replies connecting followed users in the network.",
+    "howItAffectsYourReach": "Allows in-network replies that generate meaningful discussion to be elevated into conversation modules.",
+    "theGoldenRule": "Participate meaningfully in conversation threads within your follower network to gain secondary reply reach."
+  },
+  {
+    "path": "home-mixer/models/mod.rs",
+    "inSimpleTerms": "Module declaration grouping all core data models, candidate representations, feature structs, and query contexts.",
+    "whyThisExists": "Provides strongly-typed domain models shared across candidate retrieval, hydration, filtering, and scoring stages.",
+    "howItAffectsYourReach": "Defines the feature representations and candidate metadata structures that ML ranking models evaluate.",
+    "theGoldenRule": "Content with rich, well-formed metadata is accurately mapped into internal candidate models for ranking."
+  },
+  {
+    "path": "home-mixer/models/query.rs",
+    "inSimpleTerms": "This file defines the Query model representing the viewing user's request context, including user ID, device info, location, and hydrated features. It models the request state.",
+    "whyThisExists": "Centralizes viewer context and feature hydration so that all pipeline stages have access to consistent viewer attributes.",
+    "howItAffectsYourReach": "Viewer attributes in the query model interact with candidate features to compute personalized relevance scores.",
+    "theGoldenRule": "Audiences with diverse interests will match your content differently based on their individual query feature contexts."
+  },
+  {
+    "path": "home-mixer/models/user_features.rs",
+    "inSimpleTerms": "This file defines data structures for user-level machine learning features, demographic indicators, and engagement histories. It encapsulates viewer profile features.",
+    "whyThisExists": "Provides typed, serialized user feature representations for input into Phoenix and Value Model ranking models.",
+    "howItAffectsYourReach": "Supplies the viewer side of the user-item interaction tensor, determining personalized affinity scores.",
+    "theGoldenRule": "Target specific user interest cohorts so their user feature profiles align strongly with your content."
+  },
+  {
+    "path": "home-mixer/params/config.rs",
+    "inSimpleTerms": "This file initializes and structures the global parameter configuration store. It handles parsing and environment mapping for runtime parameters.",
+    "whyThisExists": "Provides structured, type-safe access to runtime experiment variables and system configurations across all pipeline components.",
+    "howItAffectsYourReach": "Underpins parameter configuration distribution across all ranking and filtering components.",
+    "theGoldenRule": "Create well-rounded content that performs reliably across shifting parameter configurations."
+  },
+  {
+    "path": "home-mixer/params/mod.rs",
+    "inSimpleTerms": "Exports algorithmic configuration constants, feed sizing parameters, and dynamic feature toggle parameters.",
+    "whyThisExists": "Centralizes recommendation parameters, such as candidate pool sizes, pagination limits, and blend weights.",
+    "howItAffectsYourReach": "Sets hard candidate limits (e.g., RESULT_SIZE = 80) and pipeline thresholds that determine how many posts survive to final display.",
+    "theGoldenRule": "Only the top-scoring candidates within configured parameter thresholds reach the user timeline."
+  },
+  {
+    "path": "home-mixer/params/param.rs",
+    "inSimpleTerms": "This file defines all configurable feature flags, dynamic weights, and tuning constants used across Home Mixer. It binds runtime A/B testing parameters.",
+    "whyThisExists": "Allows engineers to tune scoring multipliers, filter thresholds, and feature flags dynamically without redeploying code.",
+    "howItAffectsYourReach": "Directly adjusts ranking equation weights (e.g., reply penalties, video boosts, out-of-network percentage caps).",
+    "theGoldenRule": "Understand that ranking weights evolve continuously through dynamic parameter updates and experiments."
+  },
+  {
+    "path": "home-mixer/phoenix_scores_server.rs",
+    "inSimpleTerms": "This file operates a dedicated scoring endpoint that routes post candidates directly to the Phoenix neural network ranker. It computes engagement predictions and returns enriched candidate probability vectors.",
+    "whyThisExists": "Created to decouple heavy neural network inference and feature assembly from the main timeline orchestration loop.",
+    "howItAffectsYourReach": "Calculates core probabilities for positive user actions (P(favorite), P(retweet), P(reply), P(video_view)) that dictate ranking position.",
+    "theGoldenRule": "Drive strong early positive signals to maximize the neural model's predicted probability scores."
+  },
+  {
+    "path": "home-mixer/query_hydrators/blocked_user_ids_query_hydrator.rs",
+    "inSimpleTerms": "Fetches the viewing user's blocked account list to prevent blocked users' posts from entering the candidate retrieval pool.",
+    "whyThisExists": "Enforces user privacy and safety at the earliest query stage, avoiding wasted scoring cycles on ineligible content.",
+    "howItAffectsYourReach": "Completely removes all posts from blocked authors from the viewer's recommendation candidate set.",
+    "theGoldenRule": "Avoid aggressive or spammy interactions that lead to blocks, as blocks permanently extinguish reach to those users and their clusters."
+  },
+  {
+    "path": "home-mixer/query_hydrators/cached_posts_query_hydrator.rs",
+    "inSimpleTerms": "Hydrates cached post candidates from Redis or internal memory caches to accelerate feed generation for returning users.",
+    "whyThisExists": "Reduces backend load and retrieval latency by reusing pre-scored candidates from recent user requests.",
+    "howItAffectsYourReach": "Enables previously fetched, high-scoring posts to be quickly re-ranked and served without re-querying expensive graph indexes.",
+    "theGoldenRule": "High-scoring posts enjoy extended shelf life by residing in candidate caches for subsequent user sessions."
+  },
+  {
+    "path": "home-mixer/query_hydrators/explicit_engagement_signals_query_hydrator.rs",
+    "inSimpleTerms": "Hydrates explicit user action signals (recent likes, retweets, replies, bookmarks) to build the user's real-time interest profile.",
+    "whyThisExists": "Provides recent explicit engagement features to ML rankers, allowing models to adapt instantly to the user's latest interactions.",
+    "howItAffectsYourReach": "If a user explicitly interacts with your post or niche, the hydrator informs rankers to immediately boost similar content in their feed.",
+    "theGoldenRule": "Prompt strong explicit actions (likes, retweets, bookmarks) to trigger real-time feed affinity boosts for your profile."
+  },
+  {
+    "path": "home-mixer/query_hydrators/followed_grok_topics_query_hydrator.rs",
+    "inSimpleTerms": "Fetches the Grok-inferred topic entities and semantic topics followed by the user to personalize content retrieval.",
+    "whyThisExists": "Enables topic-based out-of-network candidate retrieval and semantic matching using Grok AI topic classifications.",
+    "howItAffectsYourReach": "Matches your post's topic classifications against users who follow those Grok topic entities, driving targeted out-of-network reach.",
+    "theGoldenRule": "Focus on distinct, clear topical niches so Grok semantic classifiers accurately index your posts to interested user clusters."
+  },
+  {
+    "path": "home-mixer/query_hydrators/followed_starter_packs_query_hydrator.rs",
+    "inSimpleTerms": "Hydrates accounts and topics from curated starter packs that the user has subscribed to.",
+    "whyThisExists": "Bootstraps recommendation candidates for new users who onboard via curated creator lists and starter packs.",
+    "howItAffectsYourReach": "Inclusion in popular starter packs directly injects your posts into the query candidate pool for new and active subscribers.",
+    "theGoldenRule": "Get listed in respected niche starter packs to gain a steady source of algorithmic candidate retrieval."
+  },
+  {
+    "path": "home-mixer/query_hydrators/followed_user_ids_query_hydrator.rs",
+    "inSimpleTerms": "Retrieves the full list of user IDs that the requesting user follows from the SocialGraph service.",
+    "whyThisExists": "Essential for segmenting candidates into in-network versus out-of-network categories and powering Following timelines.",
+    "howItAffectsYourReach": "Designates your content as in-network for your followers, conferring significant baseline scoring boosts over out-of-network posts.",
+    "theGoldenRule": "Converting casual viewers into followers grants your posts preferred in-network candidate status."
+  },
+  {
+    "path": "home-mixer/query_hydrators/implicit_engagement_signals_query_hydrator.rs",
+    "inSimpleTerms": "Fetches passive and implicit user engagement signals, such as dwell time, video watch completion, profile visits, and scroll pauses.",
+    "whyThisExists": "Captures rich behavioral interest signals that explicit likes alone miss, feeding deep personalization neural networks.",
+    "howItAffectsYourReach": "Users who linger on your content or watch your videos signal high implicit interest, boosting your future posts in their feeds.",
+    "theGoldenRule": "Craft engaging media and compelling hooks that maximize dwell time and video watch duration."
+  },
+  {
+    "path": "home-mixer/query_hydrators/impressed_posts_query_hydrator.rs",
+    "inSimpleTerms": "Retrieves the list of post IDs recently impressed (displayed) to the user across past feed requests.",
+    "whyThisExists": "Prevents showing repetitive posts to the same user and feeds freshness features into ML ranking models.",
+    "howItAffectsYourReach": "Posts that have already been impressed to a user are deduplicated or heavily penalized to ensure feed variety.",
+    "theGoldenRule": "Post regularly with fresh angles; once a post is impressed to a user, the algorithm prioritizes newer un-impressed content for subsequent visits."
+  },
+  {
+    "path": "home-mixer/query_hydrators/impression_bloom_filter_query_hydrator.rs",
+    "inSimpleTerms": "Fetches a compact probabilistic Bloom filter representing all posts the user has recently viewed.",
+    "whyThisExists": "Provides ultra-fast, memory-efficient O(1) membership checks to eliminate seen posts during candidate retrieval at scale.",
+    "howItAffectsYourReach": "Quickly filters out posts the user has already seen, ensuring zero wasted slots on duplicate content.",
+    "theGoldenRule": "Create distinct, stand-alone content rather than identical reposts to pass deduplication bloom filters."
+  },
+  {
+    "path": "home-mixer/query_hydrators/ip_query_hydrator.rs",
+    "inSimpleTerms": "Extracts and normalizes client IP address and geographic location data from incoming request headers.",
+    "whyThisExists": "Provides geo-location features for local content retrieval, language alignment, and anti-abuse verification.",
+    "howItAffectsYourReach": "Helps match geographically relevant or local trending content to users in the same region.",
+    "theGoldenRule": "Local and regional content receives a geographic relevance boost for users connecting from corresponding regions."
+  },
+  {
+    "path": "home-mixer/query_hydrators/mod.rs",
+    "inSimpleTerms": "Module declaration aggregating all query-level hydrators that fetch user context, history, and graph relationships.",
+    "whyThisExists": "Orchestrates concurrent execution of user context hydration before candidate retrieval begins.",
+    "howItAffectsYourReach": "Supplies the complete behavioral and relational context that downstream ML rankers use to score creator content.",
+    "theGoldenRule": "Algorithmic reach depends on how well creator post attributes align with the hydrated user query profile."
+  },
+  {
+    "path": "home-mixer/query_hydrators/muted_user_ids_query_hydrator.rs",
+    "inSimpleTerms": "Fetches the list of accounts muted by the requesting user to filter out their content quietly.",
+    "whyThisExists": "Enforces user preference to suppress content from specific creators without unfollowing or blocking.",
+    "howItAffectsYourReach": "Silently drops all candidate posts authored by muted users from the requesting user's timeline.",
+    "theGoldenRule": "Avoid spamming or posting polarizing engagement bait that causes followers to mute your account."
+  },
+  {
+    "path": "home-mixer/query_hydrators/mutual_follow_query_hydrator.rs",
+    "inSimpleTerms": "Fetches the set of bidirectional (mutual) follow relationships for the requesting user.",
+    "whyThisExists": "Mutual follow connections represent high-affinity real-world social ties, deserving strong ranking prioritization.",
+    "howItAffectsYourReach": "Posts and replies from mutual followers receive substantial ranking boosts and priority conversation placement.",
+    "theGoldenRule": "Cultivate genuine mutual connections with key peers in your niche to unlock top-tier mutual affinity multipliers."
+  },
+  {
+    "path": "home-mixer/query_hydrators/past_request_timestamps_query_hydrator.rs",
+    "inSimpleTerms": "Retrieves the timestamps of recent feed requests to calculate user session frequency, dwell gaps, and return intervals.",
+    "whyThisExists": "Allows the recommendation engine to distinguish between rapid pull-to-refresh sessions and long-absence returns.",
+    "howItAffectsYourReach": "For returning users with long gaps, the algorithm surfaces high-scoring recap highlights; for active refreshers, it prioritizes breaking real-time posts.",
+    "theGoldenRule": "Publish a balance of evergreen high-impact posts and timely updates to capture both returning session recaps and real-time refreshes."
+  },
+  {
+    "path": "home-mixer/query_hydrators/retrieval_sequence_query_hydrator.rs",
+    "inSimpleTerms": "Hydrates the sequence of candidate source retrieval budgets and partition parameters for the active query.",
+    "whyThisExists": "Dynamically coordinates multi-source candidate fetching (SimClusters, Thunder, Phoenix, In-Network) according to traffic conditions.",
+    "howItAffectsYourReach": "Determines the allocation of retrieval slots across candidate sources, deciding how many out-of-network candidates enter scoring.",
+    "theGoldenRule": "Ensure your content qualifies across multiple candidate sources (SimClusters, Phoenix, In-Network) to maximize retrieval odds."
+  },
+  {
+    "path": "home-mixer/query_hydrators/scoring_sequence_query_hydrator.rs",
+    "inSimpleTerms": "Loads the active ML scoring pipeline sequence and model configuration for the requesting user segment.",
+    "whyThisExists": "Supports dynamic experiment routing and model selection (e.g., standard Phoenix vs MoE vs VM Ranker).",
+    "howItAffectsYourReach": "Dictates which ML ranking model and weight parameters evaluate your candidate post.",
+    "theGoldenRule": "Consistently optimize for core engagement metrics that perform strongly across all active scoring model variants."
+  },
+  {
+    "path": "home-mixer/query_hydrators/served_history_query_hydrator.rs",
+    "inSimpleTerms": "Fetches the sliding window of post IDs and author IDs served to the user in recent requests.",
+    "whyThisExists": "Enforces author diversity rules and prevents timeline repetition across multi-page browsing sessions.",
+    "howItAffectsYourReach": "If an author was served in the immediately preceding response, author diversity filters apply fatigue penalties to subsequent posts.",
+    "theGoldenRule": "Space out your high-impact posts throughout the day to avoid triggering author fatigue penalties on back-to-back user refreshes."
+  },
+  {
+    "path": "home-mixer/query_hydrators/subscribed_user_ids_query_hydrator.rs",
+    "inSimpleTerms": "Retrieves the list of creators to whom the requesting user holds paid creator subscriptions.",
+    "whyThisExists": "Enables priority delivery and exclusive badge features for paid subscriber content.",
+    "howItAffectsYourReach": "Grants premium ranking priority and dedicated placement for posts delivered to your paying subscribers.",
+    "theGoldenRule": "Deliver consistent value to paying subscribers to maintain high engagement in prioritized subscriber timelines."
+  },
+  {
+    "path": "home-mixer/query_hydrators/user_demographics_query_hydrator.rs",
+    "inSimpleTerms": "Hydrates inferred demographic features such as country, language preference, and interface locale.",
+    "whyThisExists": "Allows recommendation models to filter and score candidates matching the user's linguistic and cultural context.",
+    "howItAffectsYourReach": "Posts in the user's primary language and geographic region receive strong baseline relevance boosts.",
+    "theGoldenRule": "Publish in the native language of your primary target audience to maximize demographic relevance matching."
+  },
+  {
+    "path": "home-mixer/query_hydrators/user_inferred_gender_query_hydrator.rs",
+    "inSimpleTerms": "Hydrates coarse demographic signals used for aggregate audience modeling and ad targeting compliance.",
+    "whyThisExists": "Provides high-level demographic features for downstream ad blenders and audience segmentation models.",
+    "howItAffectsYourReach": "Primarily influences ad targeting and category preference adjustments rather than organic creator suppression.",
+    "theGoldenRule": "Focus on high-value topical content that appeals broadly across diverse audience demographics."
+  },
+  {
+    "path": "home-mixer/query_hydrators/user_installed_apps_query_hydrator.rs",
+    "inSimpleTerms": "Hydrates client platform and installed app capabilities to optimize rich media rendering and ad deep links.",
+    "whyThisExists": "Ensures that rich interactive modules, video formats, and app install cards are only served to compatible client devices.",
+    "howItAffectsYourReach": "Ensures interactive media formats are served to users on devices capable of rich engagement.",
+    "theGoldenRule": "Use modern, standard media formats that render seamlessly across both iOS and Android clients."
+  },
+  {
+    "path": "home-mixer/ranked_following_feed_server.rs",
+    "inSimpleTerms": "This file manages the ranked version of the Following feed. It takes posts strictly from followed accounts and applies machine learning ranking to surface the most relevant in-network updates first.",
+    "whyThisExists": "Created for users who want to see content from followed accounts prioritized by relevance rather than pure reverse-chronological timestamp.",
+    "howItAffectsYourReach": "Ranks followed posts using user-author affinity models; highly engaged follower interactions boost in-network feed placement over chronological ordering.",
+    "theGoldenRule": "Build deep, reciprocal interactions with your followers so your posts rank higher in their ranked following feeds."
+  },
+  {
+    "path": "home-mixer/scored_posts_server.rs",
+    "inSimpleTerms": "This file serves as a specialized internal API that retrieves, hydrates, and scores candidates without applying full timeline UI layout marshalling. It exposes raw post candidates with their associated ML scores for downstream subsystems.",
+    "whyThisExists": "Engineers built this endpoint to enable modular microservice interactions, offline evaluations, and secondary product surfaces that need raw scored candidates.",
+    "howItAffectsYourReach": "Directly exposes the candidate's raw Phoenix and Value Model probability vectors, dictating whether a post qualifies for auxiliary placement.",
+    "theGoldenRule": "Focus on high engagement quality across diverse user cohorts to maintain high raw score thresholds across all consuming sub-services."
+  },
+  {
+    "path": "home-mixer/scorers/author_cold_start.rs",
+    "inSimpleTerms": "This file implements score adjustments and exploration boosts for new or infrequent creators who lack historical engagement data. It applies Bayesian priors and temporary score floors to ensure new authors receive exposure.",
+    "whyThisExists": "X engineers built this to solve the classic recommender 'cold start' problem, ensuring new talent is discovered rather than suppressed by historical data deficits.",
+    "howItAffectsYourReach": "Applies an exploratory multiplier/boost to posts from new creators, temporarily elevating their reach in out-of-network pools.",
+    "theGoldenRule": "Capitalize on initial exposure boosts as a new creator by delivering high-quality, engaging content immediately."
+  },
+  {
+    "path": "home-mixer/scorers/mod.rs",
+    "inSimpleTerms": "Module definition aggregating all ML scoring models, ranking algorithms, and author cold start handlers.",
+    "whyThisExists": "Provides a unified scoring interface for candidate ranking across Phoenix, VM Ranker, and composite scoring stages.",
+    "howItAffectsYourReach": "Coordinates the scoring algorithms that calculate candidate rank and sort order in the timeline.",
+    "theGoldenRule": "Maximizing composite ML scores is the single most important factor for achieving top timeline placement."
+  },
+  {
+    "path": "home-mixer/scorers/phoenix_scorer.rs",
+    "inSimpleTerms": "This file calls the Phoenix transformer-based recommendation model to generate comprehensive candidate predictions. It formats query-candidate feature tensors and executes parallel model inference.",
+    "whyThisExists": "Architected to run deep neural retrieval and sequence ranking across large batches of candidate posts simultaneously.",
+    "howItAffectsYourReach": "Applies deep embedding similarity and learned attention weights between the viewing user's history and candidate post representations.",
+    "theGoldenRule": "Create topical, cohesive content that aligns tightly with well-defined user interest embeddings."
+  },
+  {
+    "path": "home-mixer/scorers/phoenix_scores_ranking_scorer.rs",
+    "inSimpleTerms": "This file consumes precomputed Phoenix neural network outputs and maps them into final ranking scores using active parameter configurations. It translates raw multi-head model logits into actionable rank values.",
+    "whyThisExists": "Engineers built this to separate raw inference extraction from dynamic parameter experimentation and score weighting.",
+    "howItAffectsYourReach": "Directly adjusts linear score combination coefficients based on active A/B testing parameters.",
+    "theGoldenRule": "Focus on driving multi-faceted engagement (shares, clicks, comments) to benefit across all dynamic scoring heads."
+  },
+  {
+    "path": "home-mixer/scorers/ranking_scorer.rs",
+    "inSimpleTerms": "This file calculates the final unified composite score for a post by weighting predicted probabilities from ML models. It maps engagement predictions (likes, retweets, replies, video views) into a single scalar ranking value.",
+    "whyThisExists": "X engineers needed a configurable formula to balance different user interactions (e.g., valuing thoughtful replies over passive likes) according to platform objectives.",
+    "howItAffectsYourReach": "Multiplies engagement probabilities by explicit business weights (e.g., reply weight, retweet weight, negative report penalties) to determine final timeline position.",
+    "theGoldenRule": "Encourage conversational replies and retweets, as active conversational actions are weighted significantly higher than passive likes."
+  },
+  {
+    "path": "home-mixer/scorers/value_model_gate.rs",
+    "inSimpleTerms": "This file acts as a quality and relevance threshold gate based on Value Model scores. It filters out candidate posts whose predicted engagement value falls below minimum required thresholds.",
+    "whyThisExists": "Architected to protect user experience and computational efficiency by preventing low-quality or irrelevant posts from progressing to expensive downstream stages.",
+    "howItAffectsYourReach": "Drops low-scoring candidate posts entirely (hard cutoff) before final timeline blending.",
+    "theGoldenRule": "Ensure every post has a clear hook and value proposition to exceed baseline model acceptance thresholds."
+  },
+  {
+    "path": "home-mixer/scorers/vm_ranker.rs",
+    "inSimpleTerms": "This file interfaces with the Value Model Ranker service to compute fine-grained engagement value predictions. It evaluates candidate posts against user historical interactions to predict downstream user satisfaction.",
+    "whyThisExists": "Built as an intermediate or heavy reranking stage to score candidates using detailed user and author feature stores.",
+    "howItAffectsYourReach": "Scores posts based on probability of positive consumption (dwell time, clicks, expands) versus negative signals (blocks, mutes, report abuse).",
+    "theGoldenRule": "Minimize negative user reactions (mutes, blocks, not-interested reports) to protect your baseline Value Model score."
+  },
+  {
+    "path": "home-mixer/selectors/blender_selector.rs",
+    "inSimpleTerms": "This file blends diverse candidate types (in-network posts, out-of-network discoveries, ads, who-to-follow cards) into a balanced timeline layout. It enforces content diversity ratios.",
+    "whyThisExists": "Prevents feeds from becoming monotone by balancing organic content, discovery posts, and commercial units in fixed proportions.",
+    "howItAffectsYourReach": "Controls the ratio of in-network vs out-of-network slots, determining how many discovery posts can appear per page.",
+    "theGoldenRule": "Out-of-network posts compete for a limited quota of discovery slots; top-tier engagement is necessary to win those blended positions."
+  },
+  {
+    "path": "home-mixer/selectors/following_blender_selector.rs",
+    "inSimpleTerms": "This file blends posts, conversation units, and ad placements specifically for the Following timeline. It maintains chronological or affinity ordering among followed creators.",
+    "whyThisExists": "Assembles the final Following feed presentation, integrating ads and conversation modules seamlessly into the creator stream.",
+    "howItAffectsYourReach": "Preserves in-network delivery order to your followers while accommodating required ad slot spacing.",
+    "theGoldenRule": "Consistent posting keeps your updates appearing regularly across your followers' blended following streams."
+  },
+  {
+    "path": "home-mixer/selectors/mod.rs",
+    "inSimpleTerms": "Module declaration grouping top-k selection algorithms and feed blenders.",
+    "whyThisExists": "Organizes candidate sorting, truncation, and multi-source blending into modular selection components.",
+    "howItAffectsYourReach": "Applies the final top-k truncation, dropping all candidates that fall outside the target feed capacity.",
+    "theGoldenRule": "Your post must outscore competing candidates to survive top-k selection into the final response payload."
+  },
+  {
+    "path": "home-mixer/selectors/passthrough_selector.rs",
+    "inSimpleTerms": "This file acts as a non-mutating selector that passes candidates forward without altering order or truncating. It is used in transparent pipeline stages.",
+    "whyThisExists": "Provides a clean passthrough component for pipelines where candidate ordering and sizing is handled upstream or downstream.",
+    "howItAffectsYourReach": "Preserves candidate ranking order exactly as output by the preceding scorer stage.",
+    "theGoldenRule": "Ensure your content achieves high upstream scores, as passthrough stages will not alter previous rankings."
+  },
+  {
+    "path": "home-mixer/selectors/top_k_score_selector.rs",
+    "inSimpleTerms": "This file sorts scored candidates in descending order and selects the top-K highest scoring posts. It trims the candidate pool to the final target size.",
+    "whyThisExists": "Extracts the exact number of top-performing posts needed to fill the user's timeline response page.",
+    "howItAffectsYourReach": "Hard ranking cutoff: only candidates in the top-K score tier make it to the client response; lower-scoring posts are dropped.",
+    "theGoldenRule": "Maximize every engagement probability to secure a top-K score ranking among hundreds of competing candidates."
+  },
+  {
+    "path": "home-mixer/server.rs",
+    "inSimpleTerms": "This file acts as the primary gRPC entry point and lifecycle orchestrator for the Home Mixer service. It binds gRPC endpoints, registers telemetry and stats handlers, and dispatches incoming user feed requests to specific pipeline servers.",
+    "whyThisExists": "X engineers needed a robust microservice bootstrap layer to manage service discovery, thread pools, health checks, and incoming request routing across multiple feed variants.",
+    "howItAffectsYourReach": "It does not apply direct scoring weights; instead, it enforces timeout budgets and operational uptime, ensuring requests successfully reach candidate retrieval and ranking pipelines.",
+    "theGoldenRule": "Maintain high-integrity content to pass global service health checks without triggering rate limits or gateway drops."
+  },
+  {
+    "path": "home-mixer/side_effects/ads_injection_logging_side_effect.rs",
+    "inSimpleTerms": "This file logs the exact insertion points, gap distances, and metadata of ads blended into the organic timeline. It tracks ad-to-organic blending metrics.",
+    "whyThisExists": "Provides telemetry to verify that ad insertion algorithms adhere to strict distance rules and monetization targets.",
+    "howItAffectsYourReach": "Monitors organic-to-ad slot ratios, ensuring organic creators maintain their allocated share of the timeline.",
+    "theGoldenRule": "Produce compelling content that retains viewer attention across ad breaks in the timeline."
+  },
+  {
+    "path": "home-mixer/side_effects/author_served_metrics_side_effect.rs",
+    "inSimpleTerms": "This file emits real-time metrics on how frequently individual authors are being served across the platform. It tracks creator impression distribution.",
+    "whyThisExists": "Allows system monitoring for creator exposure balance, author fatigue detection, and anomalous spam activity.",
+    "howItAffectsYourReach": "Supplies metrics that can trigger author fatigue limits if an account is over-served within a short time window.",
+    "theGoldenRule": "Maintain high quality across all posts rather than overwhelming the platform with spammy, high-volume publishing."
+  },
+  {
+    "path": "home-mixer/side_effects/client_events_kafka_side_effect.rs",
+    "inSimpleTerms": "This file streams timeline UI rendering events and client interaction logs to Kafka. It captures client-side rendering verification.",
+    "whyThisExists": "Provides telemetry to verify that served posts were successfully rendered and made visible on the client app.",
+    "howItAffectsYourReach": "Validates actual visual impressions, which count toward verified impression analytics and model training datasets.",
+    "theGoldenRule": "Craft engaging content that compels users to pause and read, ensuring verified viewport dwell time."
+  },
+  {
+    "path": "home-mixer/side_effects/debug_side_effect.rs",
+    "inSimpleTerms": "This file logs detailed candidate attributes and pipeline execution traces for internal debug queries. It provides developer observability.",
+    "whyThisExists": "Allows X engineers to inspect why specific posts were dropped, filtered, or boosted during internal test sessions.",
+    "howItAffectsYourReach": "Only active during internal developer debugging sessions; no effect on production creator distribution.",
+    "theGoldenRule": "Algorithms enforce strict objective rules that can be inspected down to individual scoring feature components."
+  },
+  {
+    "path": "home-mixer/side_effects/mod.rs",
+    "inSimpleTerms": "Module declaration aggregating all asynchronous side-effects, telemetry emitters, Kafka publishers, and cache writers.",
+    "whyThisExists": "Decouples post-response background logging, impression tracking, and caching from the critical request path.",
+    "howItAffectsYourReach": "Records served post IDs and interaction telemetry to Kafka, feeding real-time training datasets and deduplication caches.",
+    "theGoldenRule": "Every served impression is tracked asynchronously to update freshness models and prevent repetitive impressions."
+  },
+  {
+    "path": "home-mixer/side_effects/mutual_follow_stats_side_effect.rs",
+    "inSimpleTerms": "This file records analytics on the proportion of mutual-follow interactions occurring in served feeds. It tracks social graph density metrics.",
+    "whyThisExists": "Monitors platform health regarding community connectivity and mutual relationship engagement in the feed.",
+    "howItAffectsYourReach": "Provides telemetry used by engineers to calibrate mutual-follow ranking multipliers.",
+    "theGoldenRule": "Develop authentic, two-way creator relationships to benefit from mutual-graph algorithmic weighting."
+  },
+  {
+    "path": "home-mixer/side_effects/phoenix_experiments_side_effect.rs",
+    "inSimpleTerms": "This file logs experimental variant allocations and scoring telemetry for Phoenix A/B test groups. It tracks ML model experiment performance.",
+    "whyThisExists": "Enables machine learning engineers to evaluate new neural architectures and scoring loss functions against live production baselines.",
+    "howItAffectsYourReach": "Allocates candidate scoring across experiment variants, testing different weightings for engagement types.",
+    "theGoldenRule": "Deliver balanced engagement across likes, retweets, and comments to succeed across diverse ML model experiment buckets."
+  },
+  {
+    "path": "home-mixer/side_effects/phoenix_request_cache_side_effect.rs",
+    "inSimpleTerms": "This file caches Phoenix neural scoring request tensors and intermediate predictions. It prevents redundant model evaluations for identical query contexts.",
+    "whyThisExists": "Saves expensive GPU inference compute by caching neural scoring outputs across short-lived request bursts.",
+    "howItAffectsYourReach": "Ensures consistent scoring across rapid pagination requests while optimizing platform inference efficiency.",
+    "theGoldenRule": "Consistent high-quality content maintains stable score representations in recommendation caches."
+  },
+  {
+    "path": "home-mixer/side_effects/publish_seen_ids_to_kafka_side_effect.rs",
+    "inSimpleTerms": "This file publishes the IDs of posts that reached the user's viewport to Kafka impression topics. It logs definitive post impressions.",
+    "whyThisExists": "Updates distributed real-time impression stores so that seen posts can be filtered out across all devices.",
+    "howItAffectsYourReach": "Marks your post as seen, updating impression bloom filters across all user client instances.",
+    "theGoldenRule": "Maximize initial visual hook appeal to convert every logged impression into active engagement."
+  },
+  {
+    "path": "home-mixer/side_effects/redis_post_candidate_cache_side_effect.rs",
+    "inSimpleTerms": "This file writes hydrated and scored post candidates into a fast Redis cache. It enables quick candidate retrieval for subsequent pagination queries.",
+    "whyThisExists": "Improves pagination latency and reduces computational load by caching high-value candidates for rapid subsequent fetching.",
+    "howItAffectsYourReach": "Extends the reach window of high-scoring posts by making them readily available for subsequent feed page loads.",
+    "theGoldenRule": "High initial post scores keep your content hot in distributed Redis candidate caches."
+  },
+  {
+    "path": "home-mixer/side_effects/reranking_kafka_side_effect.rs",
+    "inSimpleTerms": "This file logs pre- and post-reranking candidate orders and features to Kafka. It tracks how rerankers modify candidate positions.",
+    "whyThisExists": "Used for offline model training and debug analysis to evaluate the exact impact of reranking heuristics on final output.",
+    "howItAffectsYourReach": "Captures training data that teaches reranking algorithms how to optimize final list ordering.",
+    "theGoldenRule": "Create content that drives deep discussion to stay favored by downstream reranking models."
+  },
+  {
+    "path": "home-mixer/side_effects/response_stats_side_effect.rs",
+    "inSimpleTerms": "This file records global response statistics, latency percentiles, and candidate count metrics. It monitors overall service performance.",
+    "whyThisExists": "Essential for operational site reliability, alerting engineers to latency spikes, drops in candidate counts, or service degradations.",
+    "howItAffectsYourReach": "Maintains service availability, ensuring creator posts are served reliably within strict response deadlines.",
+    "theGoldenRule": "Standard system uptime guarantees your content reaches active users without pipeline dropouts."
+  },
+  {
+    "path": "home-mixer/side_effects/scored_stats_side_effect.rs",
+    "inSimpleTerms": "This file aggregates and logs distributions of candidate scores (min, max, median, standard deviation). It monitors model scoring health.",
+    "whyThisExists": "Detects model drift, score compression, or anomalous feature inputs across production scoring pipelines.",
+    "howItAffectsYourReach": "Helps maintain calibrated score distributions across all creators and content categories.",
+    "theGoldenRule": "Consistently high engagement places your posts in the upper percentiles of the logged score distribution."
+  },
+  {
+    "path": "home-mixer/side_effects/served_ad_history_cache_side_effect.rs",
+    "inSimpleTerms": "This file records served advertisements in the user's ad history cache. It prevents repetitive ad displays.",
+    "whyThisExists": "Maintains ad frequency caps and ensures compliance with commercial spacing policies.",
+    "howItAffectsYourReach": "Regulates commercial ad spacing, preserving the organic post slots surrounding ad units.",
+    "theGoldenRule": "High-quality organic content thrives in the dedicated organic slots preserved between ad placements."
+  },
+  {
+    "path": "home-mixer/side_effects/served_candidates_kafka_side_effect.rs",
+    "inSimpleTerms": "This file publishes the list of served post candidates to Kafka event streams asynchronously after a response is sent. It records what was delivered to the user.",
+    "whyThisExists": "Provides essential training logs and telemetry to downstream analytics, impression trackers, and ML model training pipelines.",
+    "howItAffectsYourReach": "Serves as the ground-truth logging mechanism that powers impression counting and positive/negative training labels for future ranking models.",
+    "theGoldenRule": "Generating positive user actions when served ensures your impression logs train future models to favor your content."
+  },
+  {
+    "path": "home-mixer/side_effects/truncate_served_history_side_effect.rs",
+    "inSimpleTerms": "This file prunes and truncates the user's served history cache to maintain bounded size limits. It discards expired history entries.",
+    "whyThisExists": "Prevents infinite storage growth and ensures impression history lookups remain fast and memory-efficient.",
+    "howItAffectsYourReach": "Allows older posts to eventually exit the impression suppression window after a long passage of time.",
+    "theGoldenRule": "Focus on publishing new content rather than expecting historical posts to re-enter user impression cycles."
+  },
+  {
+    "path": "home-mixer/side_effects/update_past_request_timestamps_side_effect.rs",
+    "inSimpleTerms": "This file logs the timestamp of each timeline request to track user session frequency and inter-request intervals. It updates user activity telemetry.",
+    "whyThisExists": "Used to compute session gap features and adjust freshness weighting based on how frequently a user opens the app.",
+    "howItAffectsYourReach": "Users who open the app frequently receive fresher, lower-latency content batches, increasing opportunities for new posts to be served.",
+    "theGoldenRule": "Post consistently throughout the day to reach active users across their multiple daily session intervals."
+  },
+  {
+    "path": "home-mixer/side_effects/update_served_history_side_effect.rs",
+    "inSimpleTerms": "This file writes served post IDs into the user's persistent served history cache (e.g., Manhattan or Redis). It records recently served content.",
+    "whyThisExists": "Enables deduplication filters to prevent the same posts from being served repeatedly on subsequent timeline refreshes.",
+    "howItAffectsYourReach": "Registers your post as served, meaning the viewing user will not be served this exact post again on their next refresh.",
+    "theGoldenRule": "Make your post impactful on first view; you will not get repeat impressions on the same user in their primary discovery feed."
+  },
+  {
+    "path": "home-mixer/sources/ads_source.rs",
+    "inSimpleTerms": "This file requests and retrieves targeted sponsored ad candidates from the Ad Server. It injects commercial inventory into candidate streams.",
+    "whyThisExists": "Connects the organic timeline pipeline with the monetization ad engine for coordinated ad placement.",
+    "howItAffectsYourReach": "Governs paid distribution reach for promoted campaign posts according to advertiser bids and targeting.",
+    "theGoldenRule": "Pair organic reach strategies with targeted Promoted Post campaigns for accelerated distribution."
+  },
+  {
+    "path": "home-mixer/sources/cached_posts_source.rs",
+    "inSimpleTerms": "This file pulls post candidates from Redis/memcached fallback caches during backend degradation. It guarantees feed availability under heavy load.",
+    "whyThisExists": "Provides fault tolerance, ensuring users receive a valid timeline even when primary retrieval microservices experience outages.",
+    "howItAffectsYourReach": "Resurfaces high-scoring cached posts when primary upstream sources are unreachable.",
+    "theGoldenRule": "Evergreen content with durable engagement scores remains resilient during backend failover states."
+  },
+  {
+    "path": "home-mixer/sources/feed_survey_source.rs",
+    "inSimpleTerms": "This file injects user satisfaction surveys and feedback prompts into candidate streams. It samples users to gather qualitative feed sentiment.",
+    "whyThisExists": "Provides ground-truth training signals and customer satisfaction metrics to evaluate algorithm quality.",
+    "howItAffectsYourReach": "Does not rank posts directly, but user responses to surveys guide long-term model weight adjustments.",
+    "theGoldenRule": "Create high-satisfaction content that users would rate positively if prompted by platform quality surveys."
+  },
+  {
+    "path": "home-mixer/sources/following_night_owl_source.rs",
+    "inSimpleTerms": "This file fetches in-network posts from followed accounts using the Night Owl low-latency index. It retrieves the latest posts from a user's follow graph.",
+    "whyThisExists": "Provides high-speed in-network candidate retrieval to assemble the base pool of followed tweets for ranking.",
+    "howItAffectsYourReach": "Direct retrieval path for your followers' feeds; ensures your posts enter your followers' initial candidate pools.",
+    "theGoldenRule": "Publish consistently so your posts are present in Night Owl in-network retrieval queries for all active followers."
+  },
+  {
+    "path": "home-mixer/sources/jetfuel_frame_source.rs",
+    "inSimpleTerms": "This file retrieves structured promotional and dynamic content frames from the Jetfuel marketing and campaign engine. It sources dynamic informational modules.",
+    "whyThisExists": "Engineers built this to inject dynamic product announcements, event banners, and special campaign frames into the timeline.",
+    "howItAffectsYourReach": "Does not affect organic post reach; manages promotional and informational frame inventory.",
+    "theGoldenRule": "Participate in major platform events and trends that align with active platform campaign frames."
+  },
+  {
+    "path": "home-mixer/sources/mod.rs",
+    "inSimpleTerms": "Module declaration grouping all candidate retrieval sources (Phoenix, SimClusters, Thunder, In-Network, Ads, Prompts).",
+    "whyThisExists": "Defines the source interfaces that query distributed indexing backends to gather thousands of candidate posts per request.",
+    "howItAffectsYourReach": "Acts as the initial funnel for all content; your post must be retrieved by at least one source to enter recommendation scoring.",
+    "theGoldenRule": "Publish content with high cluster affinity and follower engagement to be retrieved across multiple candidate sources."
+  },
+  {
+    "path": "home-mixer/sources/phoenix_moe_source.rs",
+    "inSimpleTerms": "This file retrieves candidate posts from the Phoenix Mixture-of-Experts (MoE) neural model. It queries specialized expert subnetworks trained on diverse user behavior modalities.",
+    "whyThisExists": "Provides high-capacity, multi-domain recommendation retrieval by routing queries through specialized neural expert networks.",
+    "howItAffectsYourReach": "Enables niche posts to match with highly targeted user sub-segments through specialized expert routing.",
+    "theGoldenRule": "Produce specialized, high-depth content; MoE routing connects targeted subject matter with passionate sub-communities."
+  },
+  {
+    "path": "home-mixer/sources/phoenix_source.rs",
+    "inSimpleTerms": "This file retrieves out-of-network post candidates directly from the Phoenix neural retrieval system. It queries deep neural vector search indexes based on user engagement embeddings.",
+    "whyThisExists": "Serves as the primary modern discovery engine for surfacing personalized out-of-network content at massive scale.",
+    "howItAffectsYourReach": "Primary vehicle for algorithmic virality; matches post embeddings to user interest spaces for massive out-of-network reach.",
+    "theGoldenRule": "Create high-engagement content with strong semantic focus to be indexed into Phoenix neural retrieval clusters."
+  },
+  {
+    "path": "home-mixer/sources/phoenix_topics_source.rs",
+    "inSimpleTerms": "This file fetches candidate posts from Phoenix topic-based retrieval indexes. It sources top-scoring content associated with specific topic entities.",
+    "whyThisExists": "Enables the algorithm to inject high-quality topical content matching explicit or inferred user topic interests.",
+    "howItAffectsYourReach": "Surfaces your posts to users who follow or engage with the topical themes assigned to your content.",
+    "theGoldenRule": "Structure posts around clear topic themes to qualify for topic-based neural candidate retrieval."
+  },
+  {
+    "path": "home-mixer/sources/popular_topics_source.rs",
+    "inSimpleTerms": "This file retrieves trending and popular topic modules along with their associated top posts. It powers topic discovery units in home feeds.",
+    "whyThisExists": "Built to highlight broadly trending subjects and introduce users to emerging popular conversations.",
+    "howItAffectsYourReach": "Top posts in trending topics receive exponential distribution through dedicated topic carousel modules.",
+    "theGoldenRule": "Contribute authoritative insights early to emerging trending topics to win placement in topic discovery shelves."
+  },
+  {
+    "path": "home-mixer/sources/prompts_source.rs",
+    "inSimpleTerms": "This file retrieves system prompts, onboarding nudges, and engagement banners for the timeline. It manages UI prompt insertion.",
+    "whyThisExists": "Allows the platform to present interactive prompts (e.g., follow suggestions, feature announcements) to users.",
+    "howItAffectsYourReach": "Manages system UI cards; does not directly score organic creator posts.",
+    "theGoldenRule": "Stay informed on platform features highlighted in system prompts to adapt your content format."
+  },
+  {
+    "path": "home-mixer/sources/push_to_home_source.rs",
+    "inSimpleTerms": "This file retrieves candidate posts that were targeted for high-priority push notifications and ensures they are available in the home stream. It coordinates notification-to-feed transitions.",
+    "whyThisExists": "Ensures seamless continuity when a user opens the app after receiving a notification about a specific post.",
+    "howItAffectsYourReach": "Guarantees top placement for posts that triggered successful high-engagement push notifications.",
+    "theGoldenRule": "High-priority, breaking content that triggers system push alerts achieves guaranteed home feed delivery."
+  },
+  {
+    "path": "home-mixer/sources/reverse_chron_posts_source.rs",
+    "inSimpleTerms": "This file queries the core timeline storage layer for in-network posts ordered strictly by timestamp. It powers the chronological Following tab.",
+    "whyThisExists": "Delivers a pure reverse-chronological stream of followed content with minimal processing overhead.",
+    "howItAffectsYourReach": "Provides 100% unranked chronological reach to followers who view the chronological Following tab.",
+    "theGoldenRule": "Post when your followers are most active to appear at the top of their reverse-chronological feed."
+  },
+  {
+    "path": "home-mixer/sources/scored_posts_source.rs",
+    "inSimpleTerms": "This file fetches candidate posts from upstream pre-scoring services and caching layers. It ingests pre-computed candidate pools for fast timeline assembly.",
+    "whyThisExists": "Reduces timeline generation latency by reusing pre-scored candidate caches for active users.",
+    "howItAffectsYourReach": "Allows high-scoring posts to persist across candidate caches, providing sustained impressions across user sessions.",
+    "theGoldenRule": "Sustain consistent engagement to keep your posts active in upstream pre-scored candidate caches."
+  },
+  {
+    "path": "home-mixer/sources/seed_candidates_source.rs",
+    "inSimpleTerms": "This file provides seed candidates for warm-up requests, debugging, and synthetic testing pipelines. It injects deterministic post sets.",
+    "whyThisExists": "Used by engineers to validate pipeline health, verify filter behavior, and benchmark scoring modules under controlled conditions.",
+    "howItAffectsYourReach": "Used for internal synthetic testing and diagnostics; no impact on production creator reach.",
+    "theGoldenRule": "Standard algorithmic performance in production pipelines dictates organic audience growth."
+  },
+  {
+    "path": "home-mixer/sources/simclusters_source.rs",
+    "inSimpleTerms": "This file retrieves candidate posts using SimClusters community graph embeddings. It discovers content popular within overlapping interest communities and follower clusters.",
+    "whyThisExists": "Enables interest-based collaborative filtering by discovering posts favored by users who share similar follow-graph clusters.",
+    "howItAffectsYourReach": "Major source of out-of-network discovery; distributes posts across broader community clusters if influential cluster members engage.",
+    "theGoldenRule": "Win over influential creators in your niche; their engagement spreads your posts across their entire SimCluster community."
+  },
+  {
+    "path": "home-mixer/sources/thunder_source.rs",
+    "inSimpleTerms": "This file interfaces with the Thunder real-time candidate generation engine. It retrieves fresh, viral, and fast-breaking content with high early engagement velocity.",
+    "whyThisExists": "Built to capture breaking news and real-time viral trends faster than batch embedding pipelines can index.",
+    "howItAffectsYourReach": "Provides an immediate distribution surge for posts exhibiting explosive early engagement within minutes of posting.",
+    "theGoldenRule": "Drive immediate, rapid community engagement upon publishing to trigger Thunder real-time retrieval indexing."
+  },
+  {
+    "path": "home-mixer/sources/tweet_mixer_source.rs",
+    "inSimpleTerms": "This file interfaces with legacy TweetMixer services to fetch candidate pools. It acts as an integration bridge to older candidate generation clusters.",
+    "whyThisExists": "Maintains backwards compatibility and redundancy with existing candidate retrieval infrastructure.",
+    "howItAffectsYourReach": "Provides secondary candidate retrieval pathways for in-network and extended-network posts.",
+    "theGoldenRule": "Maintain strong engagement across all post types to ensure qualification across legacy and modern retrieval sources alike."
+  },
+  {
+    "path": "home-mixer/sources/who_to_follow_source.rs",
+    "inSimpleTerms": "This file fetches 'Who To Follow' account recommendation modules from the user graph service. It injects creator recommendation carousels into the feed.",
+    "whyThisExists": "Drives user network expansion by recommending relevant creators to follow directly inside the home timeline.",
+    "howItAffectsYourReach": "Surfaces your entire account profile to potential new followers in Who-To-Follow modules.",
+    "theGoldenRule": "Optimize your profile bio, niche authority, and follow graph to be recommended in Who-To-Follow carousels."
+  },
+  {
+    "path": "home-mixer/util/author_rules.rs",
+    "inSimpleTerms": "This file encapsulates author-level business rules, frequency caps, and fatigue penalties. It limits how many posts from a single author can appear consecutively.",
+    "whyThisExists": "Prevents a single prolific creator from monopolizing a user's feed, ensuring creator diversity across the timeline.",
+    "howItAffectsYourReach": "Applies progressive score demotions to subsequent posts from the same author in a single timeline view.",
+    "theGoldenRule": "Space out your content throughout the day so each post enters separate user feed generation cycles."
+  },
+  {
+    "path": "home-mixer/util/candidates_util.rs",
+    "inSimpleTerms": "This file contains helper utilities for candidate post manipulation, extraction, sorting, and feature mapping. It provides shared data transformations.",
+    "whyThisExists": "Eliminates code duplication by standardizing common candidate operations across hydrators, scorers, and filters.",
+    "howItAffectsYourReach": "Ensures candidate feature values are correctly formatted and normalized for ML model consumption.",
+    "theGoldenRule": "Well-formatted posts with valid media and text allow all scoring features to be extracted seamlessly."
+  },
+  {
+    "path": "home-mixer/util/conversation_grouping.rs",
+    "inSimpleTerms": "This file groups related posts and replies into cohesive conversation trees and modules. It structures discussion threads for timeline rendering.",
+    "whyThisExists": "Allows the recommendation algorithm to serve organized conversation modules (root tweet + top reply) rather than disjointed individual tweets.",
+    "howItAffectsYourReach": "High-scoring replies can be bundled directly under popular root tweets in conversation modules, gaining secondary exposure.",
+    "theGoldenRule": "Post thoughtful, high-value replies to viral tweets to be featured in prime conversation display modules."
+  },
+  {
+    "path": "home-mixer/util/country_codes.rs",
+    "inSimpleTerms": "This file provides ISO country code parsing and localization mapping utilities. It maps client IP addresses and user profiles to geographic regions.",
+    "whyThisExists": "Enables region-specific filtering, local trend identification, and geographic content suitability rules.",
+    "howItAffectsYourReach": "Helps route content to relevant geographic audiences and ensures compliance with country-specific regulations.",
+    "theGoldenRule": "Tailor content to regional interests and cultural context to maximize engagement in target geographic markets."
+  },
+  {
+    "path": "home-mixer/util/egress.rs",
+    "inSimpleTerms": "This file handles response egress formatting, error translation, and final status code mapping. It prepares responses for gRPC network transmission.",
+    "whyThisExists": "Standardizes egress response envelopes and manages graceful degradation when upstream errors occur.",
+    "howItAffectsYourReach": "Ensures valid timeline payloads reach the user device even if non-critical components experience partial errors.",
+    "theGoldenRule": "Reliable system delivery ensures that user engagement is smoothly logged and processed platform-wide."
+  },
+  {
+    "path": "home-mixer/util/feed_log.rs",
+    "inSimpleTerms": "This file formats structured debug and audit logs during feed generation. It records pipeline step execution and candidate tracking details.",
+    "whyThisExists": "Assists engineers in tracing candidate lifecycle decisions and diagnosing unexpected scoring anomalies.",
+    "howItAffectsYourReach": "Provides system traceability; no direct influence on algorithmic score calculations.",
+    "theGoldenRule": "Algorithmic selection is completely auditable and follows rigorous deterministic ranking logic."
+  },
+  {
+    "path": "home-mixer/util/mod.rs",
+    "inSimpleTerms": "Module declaration exporting shared utilities for URT marshalling, shadow execution, logging, and metrics.",
+    "whyThisExists": "Centralizes helper logic, formatting tools, and RPC marshallers used throughout Home Mixer.",
+    "howItAffectsYourReach": "Ensures candidates and responses are correctly transformed, sanitized, and marshalled for client consumption.",
+    "theGoldenRule": "Robust serialization and data formatting ensure error-free candidate processing across all pipeline stages."
+  },
+  {
+    "path": "home-mixer/util/phoenix_request.rs",
+    "inSimpleTerms": "This file formats and constructs gRPC request payloads for the Phoenix neural ranking service. It serializes candidate and query feature tensors.",
+    "whyThisExists": "Standardizes feature marshalling and serialization required to communicate with deep learning inference backends.",
+    "howItAffectsYourReach": "Ensures all user interaction history and post engagement signals are properly transmitted to the neural ranker.",
+    "theGoldenRule": "Drive strong engagement signals that translate into high feature values in the neural request vector."
+  },
+  {
+    "path": "home-mixer/util/rescore.rs",
+    "inSimpleTerms": "This file provides utility functions to apply real-time mathematical modifiers, multipliers, and penalties to post scores. It adjusts composite scores dynamically.",
+    "whyThisExists": "Centralizes rescoring logic, such as author diversity demotions, freshness decay curves, and media boost multipliers.",
+    "howItAffectsYourReach": "Applies score multipliers (e.g., reducing an author's second post by 0.5x, boosting rich media posts) directly modifying final rank.",
+    "theGoldenRule": "Avoid publishing multiple posts at the exact same minute to prevent author fatigue rescore penalties."
+  },
+  {
+    "path": "home-mixer/util/shadow.rs",
+    "inSimpleTerms": "This file manages dark-traffic and shadow-mode pipeline execution for testing new algorithm versions. It duplicates live traffic to test systems without affecting users.",
+    "whyThisExists": "Allows engineers to benchmark new models and pipeline code under live production load without impacting end-user experience.",
+    "howItAffectsYourReach": "Shadow pipeline results are discarded; only the active production pipeline determines live user reach.",
+    "theGoldenRule": "Keep an eye on platform algorithm announcements as successful shadow tests eventually become active production rules."
+  },
+  {
+    "path": "home-mixer/util/string_case.rs",
+    "inSimpleTerms": "This file provides string normalization and case-conversion utilities for keyword matching and entity parsing. It standardizes text tokens.",
+    "whyThisExists": "Ensures case-insensitive consistency across muted keyword filters, entity taggers, and text search utilities.",
+    "howItAffectsYourReach": "Prevents evasion of muted keyword filters through casing tricks (e.g., #Crypto vs #crypto are matched identically).",
+    "theGoldenRule": "Do not attempt casing gimmicks to bypass keyword filters; maintain honest, high-value copywriting."
+  },
+  {
+    "path": "home-mixer/util/tweet_type_metrics.rs",
+    "inSimpleTerms": "This file classifies and calculates metrics across different post formats (original, reply, quote, video, image). It aggregates format-specific telemetry.",
+    "whyThisExists": "Allows system monitoring to evaluate the performance and distribution ratios of different content formats.",
+    "howItAffectsYourReach": "Helps engineers tune format-specific multipliers (such as video engagement weights vs text engagement weights).",
+    "theGoldenRule": "Diversify your content formats (video, threads, images) to benefit across all rewarded post types."
+  },
+  {
+    "path": "home-mixer/util/url.rs",
+    "inSimpleTerms": "This file provides URL parsing, domain extraction, and link sanitization utilities. It processes external web links attached to posts.",
+    "whyThisExists": "Allows safety models and brand suitability hydrators to evaluate the reputation and safety of linked external domains.",
+    "howItAffectsYourReach": "Links to low-reputation, spammy, or unsafe domains can trigger reach penalties or safety filter drops.",
+    "theGoldenRule": "Link only to reputable, authoritative websites to maintain high trust and avoid link-penalty demotions."
+  },
+  {
+    "path": "home-mixer/util/urt/ad_marshaller.rs",
+    "inSimpleTerms": "Marshals sponsored ad candidates into Universal Response Timeline (URT) Thrift protocol entries for client display.",
+    "whyThisExists": "Transforms internal ad candidate representations into client-compliant Thrift structures with tracking tokens and disclosure metadata.",
+    "howItAffectsYourReach": "Formats ad items for seamless interleaving with organic post entries in the final response payload.",
+    "theGoldenRule": "Organic posts that share feeds with well-marshalled ads benefit from standard timeline spacing and layout clarity."
+  },
+  {
+    "path": "home-mixer/util/urt/client_event.rs",
+    "inSimpleTerms": "Generates client event logging metadata, impression tokens, and telemetry tags attached to timeline entries.",
+    "whyThisExists": "Enables the mobile and web clients to report accurate scroll, impression, and click events back to analytics servers.",
+    "howItAffectsYourReach": "Client telemetry feeds back into engagement models, updating author reputation and post performance in real time.",
+    "theGoldenRule": "Encourage active user interaction; client telemetry reports every click, dwell, and share directly to ranking feedback loops."
+  },
+  {
+    "path": "home-mixer/util/urt/controller_data.rs",
+    "inSimpleTerms": "Encodes feed controller metadata, experiment bucket IDs, and ranking debug markers into URT responses.",
+    "whyThisExists": "Provides diagnostic and telemetry tracing info so client and server logs can correlate user experience with specific pipeline configurations.",
+    "howItAffectsYourReach": "Facilitates real-time A/B testing, evaluating how different ranking parameter variants impact creator reach.",
+    "theGoldenRule": "Algorithm experiments constantly test parameter tweaks; consistently engaging content thrives across all test buckets."
+  },
+  {
+    "path": "home-mixer/util/urt/convo_marshaller.rs",
+    "inSimpleTerms": "Marshals conversation threads and reply chains into structured URT Conversation Modules for timeline rendering.",
+    "whyThisExists": "Formats parent-child reply hierarchies into visually connected conversation units on mobile and web clients.",
+    "howItAffectsYourReach": "Packages high-ranking replies alongside root posts, turning strong discussions into prominent multi-item feed units.",
+    "theGoldenRule": "Write compelling replies to high-visibility posts to get packaged into high-ranking conversation modules."
+  },
+  {
+    "path": "home-mixer/util/urt/cursors.rs",
+    "inSimpleTerms": "Generates top, bottom, and gap pagination cursors for the For You and algorithmic feeds.",
+    "whyThisExists": "Manages stateful pagination, enabling smooth infinite scroll and pull-to-refresh without skipping or repeating content.",
+    "howItAffectsYourReach": "Controls the boundary timestamps and candidate offsets used when fetching the next page of recommended content.",
+    "theGoldenRule": "Ensure your content sustains steady engagement so it continues ranking well across subsequent pagination cursor requests."
+  },
+  {
+    "path": "home-mixer/util/urt/feed_survey_marshaller.rs",
+    "inSimpleTerms": "Marshals user satisfaction surveys and feedback prompts into timeline entries.",
+    "whyThisExists": "Enables the platform to collect explicit qualitative feedback from users regarding feed relevance and content quality.",
+    "howItAffectsYourReach": "User responses to feed surveys directly calibrate platform-wide ML ranking weights and quality thresholds.",
+    "theGoldenRule": "Deliver high-value, satisfying content that encourages users to rate their timeline experience positively."
+  },
+  {
+    "path": "home-mixer/util/urt/feedback.rs",
+    "inSimpleTerms": "Builds 'See less often', 'Not interested in this topic', and author mute feedback action items for timeline posts.",
+    "whyThisExists": "Provides the UI action menus allowing users to provide negative feedback and tune their algorithmic preferences.",
+    "howItAffectsYourReach": "Negative feedback actions immediately penalize author and topic affinity scores for the reporting user.",
+    "theGoldenRule": "Avoid misleading hooks and clickbait that trigger 'Show less often' user feedback actions."
+  },
+  {
+    "path": "home-mixer/util/urt/frame_marshaller.rs",
+    "inSimpleTerms": "Marshals rich UI frame components and layout modules into URT entry structures.",
+    "whyThisExists": "Translates internal Frame representations into client-renderable interactive modules, banners, and topic carousels.",
+    "howItAffectsYourReach": "Formats featured creator content into rich UI modules that capture outsized user visual attention.",
+    "theGoldenRule": "Participate in structured topics and multimedia events to be eligible for rich frame marshalling."
+  },
+  {
+    "path": "home-mixer/util/urt/mod.rs",
+    "inSimpleTerms": "The core URT marshalling module, coordinating conversion of scored candidates and modules into final Thrift timeline responses.",
+    "whyThisExists": "Serves as the primary serialization layer transforming internal pipeline candidates into the standard client protocol.",
+    "howItAffectsYourReach": "Finalizes timeline order, entry IDs, and visual layout before transmitting the feed payload to the user.",
+    "theGoldenRule": "Posts that survive all ranking and filtering stages are formatted here for direct presentation on user screens."
+  },
+  {
+    "path": "home-mixer/util/urt/navigation.rs",
+    "inSimpleTerms": "Constructs navigation actions, deep links, and client intent directives for timeline entries.",
+    "whyThisExists": "Ensures that tapping on posts, profiles, hashtags, or external URLs routes the user to the correct client view.",
+    "howItAffectsYourReach": "Enables smooth navigation from timeline impressions to creator profile pages and conversation views.",
+    "theGoldenRule": "Include clean links and hashtags that provide seamless client navigation without cluttering post readability."
+  },
+  {
+    "path": "home-mixer/util/urt/new_tweets_pill.rs",
+    "inSimpleTerms": "Constructs the interactive 'New Posts' / 'New Tweets' floating pill instruction for live timeline updates.",
+    "whyThisExists": "Notifies active users that fresh content is available without jarringly jumping or auto-scrolling their current feed view.",
+    "howItAffectsYourReach": "Drives immediate user clicks to scroll to the top of the feed, granting incoming new posts instant peak visibility.",
+    "theGoldenRule": "Post breaking updates during high-activity periods to catch users clicking the 'New Posts' pill."
+  },
+  {
+    "path": "home-mixer/util/urt/post_marshaller.rs",
+    "inSimpleTerms": "Marshals individual scored post candidates into URT TimelineItem post entries with full social context and metrics.",
+    "whyThisExists": "Converts internal post representations into standard Thrift post items, attaching social context (e.g., 'Liked by X', 'Topic Y').",
+    "howItAffectsYourReach": "Attaches social proof headers that significantly increase click-through and engagement rates when displayed to users.",
+    "theGoldenRule": "Engagement from influential accounts generates social context banners that make your post stand out in the feed."
+  },
+  {
+    "path": "home-mixer/util/urt/prompt_marshaller.rs",
+    "inSimpleTerms": "Marshals system prompts, onboarding messages, and announcement banners into timeline entries.",
+    "whyThisExists": "Injects informational system banners and educational prompts into user feeds in a standardized format.",
+    "howItAffectsYourReach": "Positions administrative and product prompts without disrupting adjacent organic candidate ranking.",
+    "theGoldenRule": "Standard timeline formatting ensures system notices do not displace high-ranking organic content."
+  },
+  {
+    "path": "home-mixer/util/urt/push_to_home_marshaller.rs",
+    "inSimpleTerms": "Marshals push-to-home injected posts triggered by push notification clicks into the top of the timeline.",
+    "whyThisExists": "Ensures that when a user opens a push notification, the corresponding post is pinned at the top of their freshly loaded home feed.",
+    "howItAffectsYourReach": "Secures guaranteed position #1 for posts clicked via push notifications, driving immediate focused engagement.",
+    "theGoldenRule": "Send compelling notifications that entice followers to tap, guaranteeing top-of-feed placement via push-to-home injection."
+  },
+  {
+    "path": "home-mixer/util/urt/reverse_chron_following/cursors.rs",
+    "inSimpleTerms": "Builds time-based pagination cursors tailored specifically for reverse-chronological following feeds.",
+    "whyThisExists": "Maintains strict chronological timeline boundaries so scrolling backwards or forwards in time yields no gaps or duplicates.",
+    "howItAffectsYourReach": "Determines the exact time windows queried during following feed pagination.",
+    "theGoldenRule": "Chronological reach is purely a function of publication time relative to when your followers scroll their feeds."
+  },
+  {
+    "path": "home-mixer/util/urt/reverse_chron_following/mod.rs",
+    "inSimpleTerms": "Constructs the full URT timeline response specifically for the reverse-chronological Following timeline.",
+    "whyThisExists": "Marshals follower posts, ad placements, and cursors into a clean chronological Thrift response without algorithmic scoring overhead.",
+    "howItAffectsYourReach": "Delivers un-ranked follower posts directly in order of creation, guaranteeing 100% chronological delivery to active followers.",
+    "theGoldenRule": "Maintain a regular posting cadence to ensure active followers encounter your updates whenever they open their Following tab."
+  },
+  {
+    "path": "home-mixer/util/urt/wtf_marshaller.rs",
+    "inSimpleTerms": "Marshals Who To Follow (WTF) user recommendation modules into structured timeline carousel entries.",
+    "whyThisExists": "Formats suggested creator profiles into clean user recommendation units displayed between feed posts.",
+    "howItAffectsYourReach": "Surfaces your profile in 'Who to Follow' carousel modules to relevant users, driving direct follower growth.",
+    "theGoldenRule": "Optimize your profile bio, topic tags, and follower network to be frequently recommended in 'Who to Follow' timeline modules."
+  },
+  {
+    "path": "home-mixer/util/xds.rs",
+    "inSimpleTerms": "This file configures dynamic xDS gRPC service discovery and client-side load balancing. It connects Home Mixer to upstream microservices.",
+    "whyThisExists": "Ensures resilient, low-latency communication across distributed clusters by dynamically routing requests around unhealthy nodes.",
+    "howItAffectsYourReach": "Guarantees reliable microservice connectivity so that candidate posts are scored and served without dropouts.",
+    "theGoldenRule": "Platform stability ensures that every published post receives fair, uninterrupted evaluation by the ranking pipeline."
+  }
+]

@@ -1,0 +1,1941 @@
+[
+  {
+    "path": "candidate-pipeline/candidate_pipeline.rs",
+    "inSimpleTerms": "Defines the modular asynchronous execution lifecycle for candidate recommendation pipelines, coordinating query hydration, source fetching, filtering, scoring, selection, and side effects. It tracks stage-by-stage latencies, item counts, and execution metrics.",
+    "whyThisExists": "X engineers needed a standardized, high-performance, asynchronous pipeline engine across all feed surfaces that could safely execute heterogeneous retrieval and ranking stages within rigid latency deadlines.",
+    "howItAffectsYourReach": "Governs the funnel where thousands of retrieved raw posts are progressively filtered, scored by ML models, and truncated into the top 20-50 posts displayed on user timelines.",
+    "theGoldenRule": "Optimize content to survive every pipeline stage: ensure valid metadata to pass filters, drive high engagement velocity to win scoring, and maintain recency to survive final selection."
+  },
+  {
+    "path": "candidate-pipeline/filter.rs",
+    "inSimpleTerms": "Provides the asynchronous filter trait and execution harness that drops unwanted, ineligible, abusive, or duplicate candidate items from the pipeline stream. It records per-filter drop counts and execution timings.",
+    "whyThisExists": "To enforce platform safety, author blocks, muted keywords, and deduplication rules in parallel before candidates consume expensive downstream ML scoring compute.",
+    "howItAffectsYourReach": "Failing any single active filter immediately purges a candidate post from consideration, resulting in a 100% distribution drop before scoring even begins.",
+    "theGoldenRule": "Avoid aggressive trigger words, spam patterns, and policy violations; surviving the initial filtering gauntlet is a mandatory prerequisite for algorithmic reach."
+  },
+  {
+    "path": "candidate-pipeline/hydrator.rs",
+    "inSimpleTerms": "Defines asynchronous hydrator traits that enrich bare candidate IDs with rich features, author graph attributes, media metadata, and interaction histories. It supports both item-level and batch-level hydration strategies.",
+    "whyThisExists": "To decouple lean candidate retrieval keys from heavyweight feature graphs and key-value store lookups, maximizing pipeline throughput and cache utilization.",
+    "howItAffectsYourReach": "Supplies the essential feature vectors that ranking models consume; missing or unhydrated features can cause ranking penalties or fallback default scores.",
+    "theGoldenRule": "Maintain complete profile metadata and rich media attachments so hydrators provide full feature context to downstream neural network rankers."
+  },
+  {
+    "path": "candidate-pipeline/lib.rs",
+    "inSimpleTerms": "Exposes the candidate pipeline library modules and configures tracing span verbosity levels for performance telemetry across asynchronous execution trees.",
+    "whyThisExists": "To serve as the root crate entry point for the reusable, modular recommendation pipeline framework used across all X backend services.",
+    "howItAffectsYourReach": "Indirect; establishes the compilation foundation and instrumentation macros that govern pipeline execution and observability.",
+    "theGoldenRule": "Keep underlying microservices healthy and responsive to ensure tracing thresholds do not trip circuit breakers."
+  },
+  {
+    "path": "candidate-pipeline/pipeline_summary.rs",
+    "inSimpleTerms": "Collects fine-grained execution statistics across all pipeline stages, tracking duration, input/output candidate counts, and failure rates per component.",
+    "whyThisExists": "To provide deep real-time observability and profiling for asynchronous candidate generation pipelines without introducing synchronization bottlenecks.",
+    "howItAffectsYourReach": "Surfaces bottlenecks and high-drop filter stages, directly alerting engineers to anomalous content pruning or latency spikes.",
+    "theGoldenRule": "Produce well-formed, valid posts so pipeline stages execute cleanly without incurring timeout or parse-failure drop penalties."
+  },
+  {
+    "path": "candidate-pipeline/query_hydrator.rs",
+    "inSimpleTerms": "Enriches incoming user queries with viewer contextual data, device attributes, and user preference state before candidate retrieval begins.",
+    "whyThisExists": "To guarantee candidate retrieval sources have access to personalized user context before querying vector stores and indices.",
+    "howItAffectsYourReach": "Matches the candidate retrieval space directly to the viewer's active interests, language, and geographic constraints.",
+    "theGoldenRule": "Target topical niches with strong community cohesion so user query embeddings align closely with your content embeddings."
+  },
+  {
+    "path": "candidate-pipeline/scorer.rs",
+    "inSimpleTerms": "Defines the scoring trait that attaches floating-point relevance, engagement, or diversity scores to candidate items.",
+    "whyThisExists": "To provide a uniform abstraction for integrating diverse machine learning rankers, heuristic scorers, and blend functions.",
+    "howItAffectsYourReach": "Directly sets the quantitative relevance rank of a candidate, which determines its sorting position and probability of appearing in the top feed slots.",
+    "theGoldenRule": "Drive high early engagement rates (retweets, replies, video completion) to maximize model predicted scores."
+  },
+  {
+    "path": "candidate-pipeline/selector.rs",
+    "inSimpleTerms": "Implements candidate selection and truncation logic, picking the top-N scored candidates and recording result size metrics.",
+    "whyThisExists": "To enforce feed size limits and select the highest-scoring candidate subset for presentation to downstream layers.",
+    "howItAffectsYourReach": "Acts as the final cutoff gate; candidates outside the top-N selector threshold are discarded and receive no impressions.",
+    "theGoldenRule": "Aim for top-tier engagement metrics to ensure your posts comfortably clear the top-N selection cutoff."
+  },
+  {
+    "path": "candidate-pipeline/side_effect.rs",
+    "inSimpleTerms": "Executes asynchronous side effects - such as logging impressions, publishing kafka telemetry, or writing analytics - after candidate selection finishes.",
+    "whyThisExists": "To cleanly isolate asynchronous bookkeeping and telemetry from the critical latency path of returning user feeds.",
+    "howItAffectsYourReach": "Captures impression and exposure logs that feed continuous machine learning training pipelines and model feedback loops.",
+    "theGoldenRule": "High viewer dwell time and genuine interaction create positive training signals logged by side-effect handlers for future ranking rounds."
+  },
+  {
+    "path": "candidate-pipeline/source.rs",
+    "inSimpleTerms": "Defines the candidate source trait responsible for fetching initial pools of candidate posts from vector search, graph algorithms, or caches.",
+    "whyThisExists": "To provide a standardized interface for heterogeneous candidate generators (Thunder, SimClusters, Search, Graph) in recommendation pipelines.",
+    "howItAffectsYourReach": "Serves as the gateway for candidate discovery; if a post is not retrieved by at least one active candidate source, it cannot enter the feed.",
+    "theGoldenRule": "Maintain relevance in multiple discovery channels (in-network graphs, semantic SimClusters, topic indices) to maximize initial candidate retrieval."
+  },
+  {
+    "path": "candidate-pipeline/util.rs",
+    "inSimpleTerms": "Provides lightweight utility functions, including extracting clean, short type names from fully qualified Rust module paths for telemetry labels.",
+    "whyThisExists": "To sanitize and streamline type identifiers for metric emission without allocating heavy runtime strings.",
+    "howItAffectsYourReach": "Indirect; ensures metric tracking and monitoring dashboards accurately attribute pipeline stage performance.",
+    "theGoldenRule": "Operates as internal telemetry infrastructure with zero direct creator reach impact."
+  },
+  {
+    "path": "simclusters/simclusters_v2/candidate_source/ClusterRanker.scala",
+    "inSimpleTerms": "Ranks and filters cluster candidates based on user interest scores, selecting the highest-affinity topic clusters for a given viewer.",
+    "whyThisExists": "To identify which specific community clusters a user is most deeply interested in before expanding those clusters into candidate tweets.",
+    "howItAffectsYourReach": "If a user has high interest in a cluster where your tweet is top-ranked, your post is prioritized in their candidate retrieval pool.",
+    "theGoldenRule": "Establish dominance in distinct, high-engagement topic clusters so your tweets surface whenever those clusters are selected for active users."
+  },
+  {
+    "path": "simclusters/simclusters_v2/candidate_source/HeavyRanker.scala",
+    "inSimpleTerms": "Applies a heavyweight ML scoring model over retrieved SimCluster candidate tweets, incorporating user-author interaction features and cluster affinity weights.",
+    "whyThisExists": "To refine coarse vector retrieval candidates into high-precision ranked recommendations before passing to Home Mixer.",
+    "howItAffectsYourReach": "Scores out-of-network candidates; tweets with higher predicted engagement and cluster alignment receive significant ranking boosts.",
+    "theGoldenRule": "Drive strong engagement from diverse users within your niche to maximize heavy ranker predictive confidence."
+  },
+  {
+    "path": "simclusters/simclusters_v2/candidate_source/SimClustersANNCandidateSource.scala",
+    "inSimpleTerms": "Implements the core library version of SimClusters ANN candidate generation, fetching user interest embeddings and intersecting them with cluster tweet indices.",
+    "whyThisExists": "To provide a reusable, client-side candidate source implementation for recommendation services embedding SimClusters vector search.",
+    "howItAffectsYourReach": "Fetches hundreds of out-of-network candidate tweets based on 145,000-dimensional sparse semantic vectors.",
+    "theGoldenRule": "Keep content topically consistent so your tweets cleanly map to top-tier SimClusters cluster indices."
+  },
+  {
+    "path": "simclusters/simclusters_v2/candidate_source/SimClustersANNWrapperCandidateSource.scala",
+    "inSimpleTerms": "Wraps the SimClusters ANN candidate source with statistical tracking, fallback mechanisms, and client timeouts.",
+    "whyThisExists": "To ensure robust, fault-tolerant execution of ANN retrieval inside candidate generation pipelines.",
+    "howItAffectsYourReach": "Guarantees candidate availability even during partial network hiccups or downstream service slowdowns.",
+    "theGoldenRule": "Internal resilience wrapper ensuring continuous delivery of candidate pools."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/CosineSimilarityUtil.scala",
+    "inSimpleTerms": "Provides mathematical utilities for sparse vector dot products, L2 vector norms, and cosine similarity calculations across SimClusters embeddings.",
+    "whyThisExists": "To encapsulate optimized vector mathematics used throughout online retrieval and offline embedding generation pipelines.",
+    "howItAffectsYourReach": "Calculates the core cosine similarity metrics that determine how closely a post matches a user's cluster interest profile.",
+    "theGoldenRule": "High topic density and strong keyword focus maximize sparse vector dot products with relevant audience interest vectors."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/DeciderGateBuilderWithIdHashing.scala",
+    "inSimpleTerms": "Builds feature decider gates that hash entity IDs (user IDs, tweet IDs) to enable deterministic feature rollout and experiment bucket assignment.",
+    "whyThisExists": "To safely ramp up new recommendation algorithms and embedding models to controlled percentages of users without bias.",
+    "howItAffectsYourReach": "Controls whether your posts or viewers are evaluated under new SimCluster model variants or standard production models.",
+    "theGoldenRule": "Internal experimentation infrastructure."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/ModelVersions.scala",
+    "inSimpleTerms": "Defines model version constants (e.g. Model20M145KDec11, Model20M145K2020) and mappings across the SimClusters ecosystem.",
+    "whyThisExists": "To maintain backward compatibility and explicit version tracking across offline graph jobs, online stores, and retrieval services.",
+    "howItAffectsYourReach": "Dictates which cluster topology graph (number of clusters, user-to-cluster weights) is used to index and score your content.",
+    "theGoldenRule": "Internal version catalog."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/SeqStandardDeviation.scala",
+    "inSimpleTerms": "Calculates standard deviation and statistical variance over numeric sequences, used in score normalization across cluster distributions.",
+    "whyThisExists": "To normalize raw cluster scores and prevent high-variance clusters from dominating recommendation rankings.",
+    "howItAffectsYourReach": "Normalizes score distributions so niche community scores are mathematically comparable to mainstream cluster scores.",
+    "theGoldenRule": "Consistent engagement across your niche yields stable normalized scores, preventing sudden score drops."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/SimClustersEmbedding.scala",
+    "inSimpleTerms": "Defines the core sparse vector data structure representing a user, tweet, or topic as a map of cluster IDs to floating-point affinity scores.",
+    "whyThisExists": "To represent high-dimensional, sparse semantic embeddings (145K+ dimensions) with minimal memory footprint and fast serialization.",
+    "howItAffectsYourReach": "This embedding is the primary mathematical representation of your content's topic and audience reach across X's semantic graph.",
+    "theGoldenRule": "Produce clear, on-topic content that generates strong weights in specific cluster IDs rather than weak weights scattered across thousands of random clusters."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/SimClustersEmbeddingAttentionUtil.scala",
+    "inSimpleTerms": "Applies attention mechanisms and softmax transformations over SimClusters embedding dimensions to emphasize the most significant clusters.",
+    "whyThisExists": "To amplify core interest clusters while suppressing noisy, low-confidence background cluster weights.",
+    "howItAffectsYourReach": "Sharpens the focus on your primary topic clusters, boosting recommendations to dedicated community members while filtering out irrelevant audiences.",
+    "theGoldenRule": "Reinforce your primary niche; softmax attention amplifies top cluster weights and suppresses peripheral topics."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/SimClustersEmbeddingId.scala",
+    "inSimpleTerms": "Defines strongly typed identifiers for different embedding types (UserKnownFor, UserInterestedIn, Tweet, Topic, SemanticCoreEntity).",
+    "whyThisExists": "To uniquely identify and namespace vector embeddings across diverse entity types and model versions in storage backends.",
+    "howItAffectsYourReach": "Ensures the correct embedding type is retrieved for ranking calculations (e.g. differentiating what a creator is 'known for' from what a user is 'interested in').",
+    "theGoldenRule": "Internal entity typing structure."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/SimClustersEmbeddingIdCacheKeyBuilder.scala",
+    "inSimpleTerms": "Constructs serialized cache keys from SimClustersEmbeddingId instances for Memcached and local cache lookups.",
+    "whyThisExists": "To standardize cache key formatting across multi-tier caching architectures.",
+    "howItAffectsYourReach": "Ensures rapid cache hits for user and tweet embeddings during real-time retrieval.",
+    "theGoldenRule": "Internal cache formatting utility."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/SimClustersEmbeddingMonoid.scala",
+    "inSimpleTerms": "Implements an Algebird Monoid for SimClusters embeddings, defining associative addition and zero-value semantics for vector aggregation.",
+    "whyThisExists": "To enable distributed, parallel aggregation of sparse embeddings in MapReduce (Scalding) and streaming (Summingbird) pipelines.",
+    "howItAffectsYourReach": "Powers the distributed summation of user interaction signals that continuously build your tweet and creator cluster embeddings.",
+    "theGoldenRule": "Every interaction (like, retweet, reply) mathematically accumulates into your cluster embedding via these monoid aggregations."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/SimClustersMultiEmbedding.scala",
+    "inSimpleTerms": "Encapsulates multi-aspect embeddings where an entity can possess multiple distinct SimClusters embeddings across different time horizons or interaction types.",
+    "whyThisExists": "To capture multi-faceted user interests (e.g. short-term 8-hour trending interests vs. long-term persistent interests).",
+    "howItAffectsYourReach": "Allows your content to match users based on either immediate real-time interest spikes or durable historical topic affinities.",
+    "theGoldenRule": "Post timely content on breaking topics to capture real-time interest embeddings while maintaining core niche themes for long-term discovery."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/SimClustersMultiEmbeddingId.scala",
+    "inSimpleTerms": "Defines identifiers for multi-embedding configurations, specifying temporal decays and interaction type subsets.",
+    "whyThisExists": "To namespace and query composite multi-embedding vectors in distributed storage systems.",
+    "howItAffectsYourReach": "Ensures downstream services query the precise temporal embedding window (real-time vs historical).",
+    "theGoldenRule": "Internal multi-embedding identification."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/clustering/ClusterRepresentativeSelectionMethod.scala",
+    "inSimpleTerms": "Defines the interface for selecting representative accounts and users for a given cluster community.",
+    "whyThisExists": "To identify cluster centroids and influential anchor accounts that define the identity of a SimCluster.",
+    "howItAffectsYourReach": "Becoming a representative account for a cluster establishes you as a primary topical authority, boosting out-of-network recommendation weight for your posts.",
+    "theGoldenRule": "Be an active, highly followed authority within a focused niche to be selected as a cluster representative account."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/clustering/ClusteringMethod.scala",
+    "inSimpleTerms": "Defines the base abstraction for graph clustering algorithms that partition user follow/favorite graphs into discrete SimClusters.",
+    "whyThisExists": "To allow interchangeable clustering algorithms (Louvain, Connected Components, Largest Dimension) in graph generation pipelines.",
+    "howItAffectsYourReach": "The clustering method determines how communities are drawn and how your account is grouped with peers on the platform.",
+    "theGoldenRule": "Follow and interact with peers in your specific domain so graph partition algorithms cluster you accurately."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/clustering/ConnectedComponentsClusteringMethod.scala",
+    "inSimpleTerms": "Partitions graphs into connected components based on interaction thresholds, isolating distinct disconnected sub-communities.",
+    "whyThisExists": "To identify independent, self-contained community graphs that do not share cross-community edges.",
+    "howItAffectsYourReach": "Groups tightly knit user bases together, ensuring niche community content is served primarily to relevant members.",
+    "theGoldenRule": "Build strong in-group interactions within your specialized community."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/clustering/LargestDimensionClusteringMethod.scala",
+    "inSimpleTerms": "Assigns entities to clusters based on their largest single dimension weight in a continuous embedding space.",
+    "whyThisExists": "To provide a lightweight, deterministic hard-assignment clustering baseline for fast entity partitioning.",
+    "howItAffectsYourReach": "Places creator accounts into their single most dominant interest category.",
+    "theGoldenRule": "Make sure your primary content theme is unambiguous so hard clustering places you in the right category."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/clustering/LouvainClusteringMethod.scala",
+    "inSimpleTerms": "Implements the Louvain modularity optimization algorithm for community detection on massive bipartite follow and engagement graphs.",
+    "whyThisExists": "To discover natural, multi-scale communities across hundreds of millions of users without requiring predefined category taxonomies.",
+    "howItAffectsYourReach": "Forms the 145,000 SimClusters that power all out-of-network recommendation channels across the platform.",
+    "theGoldenRule": "Engage deeply within your specific subculture; Louvain modularity groups accounts based on dense mutual engagement subgraphs."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/clustering/MaxFavScoreRepresentativeSelectionMethod.scala",
+    "inSimpleTerms": "Selects cluster representative users based on maximum cumulative favorite engagement within that cluster's members.",
+    "whyThisExists": "To anchor cluster definitions to accounts that receive the highest positive community validation.",
+    "howItAffectsYourReach": "Accounts with top favorite counts in a cluster become anchor nodes, conferring heavy recommendation reach on their posts.",
+    "theGoldenRule": "Maximize like-to-view ratios among your core audience to be designated a cluster leader."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/clustering/MedoidRepresentativeSelectionMethod.scala",
+    "inSimpleTerms": "Selects the medoid account - the user whose embedding has the highest average similarity to all other members in the cluster - as the representative.",
+    "whyThisExists": "To identify the most central, prototypical account of a topic cluster rather than an extreme outlier.",
+    "howItAffectsYourReach": "Centrality in a cluster boosts topical authority scores across all recommendations within that subject area.",
+    "theGoldenRule": "Post core, foundational content in your niche rather than polarizing tangential topics to remain near the cluster medoid."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/clustering/SimilarityFunctions.scala",
+    "inSimpleTerms": "Defines vector similarity and distance functions (cosine, Jaccard, Euclidean) used during graph clustering and centroid calculation.",
+    "whyThisExists": "To standardize mathematical similarity operations across graph clustering algorithms.",
+    "howItAffectsYourReach": "Shapes how closely accounts and tweets are linked during offline graph generation passes.",
+    "theGoldenRule": "Mathematical foundation for community graph building."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/ml/SimClustersEmbeddingAdapter.scala",
+    "inSimpleTerms": "Converts SimClusters sparse embedding objects into ML DataRecord feature formats for machine learning training and inference pipelines.",
+    "whyThisExists": "To feed sparse cluster embedding features into deep learning ranking models (Phoenix, Heavy Rankers).",
+    "howItAffectsYourReach": "Exposes your tweet's cluster affinity scores as input features for ML models that decide final feed placement.",
+    "theGoldenRule": "High cluster confidence scores translate directly into positive feature values during ML ranking."
+  },
+  {
+    "path": "simclusters/simclusters_v2/common/package.scala",
+    "inSimpleTerms": "Defines common type aliases (TweetId, UserId, ClusterId, SemanticCoreEntityId) and package-level implicits.",
+    "whyThisExists": "To provide type safety and readability across the SimClusters v2 codebase.",
+    "howItAffectsYourReach": "Provides foundational scalar and identifier types across vector and graph ranking engines.",
+    "theGoldenRule": "Use standardized entity and cluster IDs to ensure seamless type interop across all SimClusters recommendation pipelines."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/BipartiteClusterEvaluation.scala",
+    "inSimpleTerms": "Evaluates the quality of SimClusters cluster assignments by computing modularity and conductance metrics over bipartite user-producer follow graphs.",
+    "whyThisExists": "To mathematically validate whether graph clustering iterations produce cohesive, distinct topic communities.",
+    "howItAffectsYourReach": "Ensures that the topic clusters your account is assigned to remain high-quality and accurately reflect real-world user interest boundaries.",
+    "theGoldenRule": "Build authentic connections with genuine domain peers; high cluster conductance ensures your niche community remains cohesive."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/BipartiteClusterEvaluationClasses.scala",
+    "inSimpleTerms": "Defines case classes and metrics containers for reporting cluster modularity, purity, and edge density results.",
+    "whyThisExists": "To structure evaluation outputs generated during large-scale graph clustering verification runs.",
+    "howItAffectsYourReach": "Internal metrics schema ensuring clustering fidelity across the platform.",
+    "theGoldenRule": "Internal evaluation structures."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/ClusterDetailsJob.scala",
+    "inSimpleTerms": "Aggregates descriptive metadata for each SimCluster, calculating top keywords, representative accounts, and total member populations.",
+    "whyThisExists": "To generate human-interpretable labels and rich contextual profiles for 145,000+ machine-generated clusters.",
+    "howItAffectsYourReach": "Your account may be selected as a top representative account for a cluster, making your profile a key anchor for that topic.",
+    "theGoldenRule": "Establish authoritative expertise in your domain to be indexed as a representative anchor account for your primary topic cluster."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/ClusterEvaluation.scala",
+    "inSimpleTerms": "Runs batch evaluation pipelines comparing different SimClusters model configurations on recommendation accuracy and cluster coherence.",
+    "whyThisExists": "To benchmark candidate graph models before promoting them to production candidate generation pipelines.",
+    "howItAffectsYourReach": "Validates that model updates improve recommendation relevance and out-of-network discovery quality.",
+    "theGoldenRule": "Internal offline model validation."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/CompareClusters.scala",
+    "inSimpleTerms": "Computes Jaccard similarity and overlap metrics between clusters across different model versions to analyze cluster drift over time.",
+    "whyThisExists": "To track how online communities evolve and ensure continuity when transitioning to new cluster graph versions.",
+    "howItAffectsYourReach": "Prevents sudden distribution drops for creators when cluster definitions are updated and migrated.",
+    "theGoldenRule": "Maintain clear niche consistency so your account smoothly transitions across cluster model updates."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/EigenVectorsForSparseSymmetric.scala",
+    "inSimpleTerms": "Calculates top eigenvectors and eigenvalues for sparse symmetric user-user engagement matrices using distributed power iteration.",
+    "whyThisExists": "To perform spectral graph analysis and dimensionality reduction on massive social graphs.",
+    "howItAffectsYourReach": "Shapes the primary geometric coordinate space used to project users and tweets into low-dimensional semantic vectors.",
+    "theGoldenRule": "Foundational spectral graph decomposition algorithm."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/InterestedInFromAggregatableProducerEmbeddings.scala",
+    "inSimpleTerms": "Computes user 'InterestedIn' embeddings by aggregating the KnownFor embeddings of all creators each user engages with.",
+    "whyThisExists": "To construct high-fidelity user interest profiles based on the verified domain authority of creators they consume.",
+    "howItAffectsYourReach": "When users engage with your posts, your creator KnownFor profile directly shapes their InterestedIn vector, steering their future feed toward your content.",
+    "theGoldenRule": "Solidify your reputation as a premier creator in your niche; your authority directly programs the feed preferences of your engaged audience."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/InterestedInFromKnownFor.scala",
+    "inSimpleTerms": "Generates batch user InterestedIn vectors by projecting user-to-producer follow graphs onto producer KnownFor cluster matrices.",
+    "whyThisExists": "To compute foundational user interest vectors from follow graph topology at scale in Hadoop/Scalding.",
+    "howItAffectsYourReach": "When an account follows you, your topical authority transfers into their interest profile, ensuring your tweets populate their recommendations.",
+    "theGoldenRule": "Attract followers who genuinely care about your subject matter to maximize the topical alignment of your follower graph."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/InterestedInFromKnownForLite.scala",
+    "inSimpleTerms": "Provides a lightweight, fast-running Scalding job for updating InterestedIn embeddings for active users with lower compute overhead.",
+    "whyThisExists": "To enable frequent, daily refreshes of user interest vectors without running expensive full-graph batch pipelines.",
+    "howItAffectsYourReach": "Ensures active users' interest profiles reflect their newest follows and interactions on a daily basis.",
+    "theGoldenRule": "Keep engaging with active followers who open the app daily."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/InterestedInFromProducerEmbeddingsAdhocApp.scala",
+    "inSimpleTerms": "An ad-hoc Scalding application for testing experimental weighting formulas when projecting user interests from producer embeddings.",
+    "whyThisExists": "To prototype and evaluate alternative interest aggregation weighting strategies offline.",
+    "howItAffectsYourReach": "Tests variations in how heavily creator follow versus favorite actions influence viewer interest vectors.",
+    "theGoldenRule": "Internal research and experimentation harness."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/KnownForSources.scala",
+    "inSimpleTerms": "Defines input data sources and dataset paths for computing producer KnownFor embeddings from follow, favorite, and mention graphs.",
+    "whyThisExists": "To encapsulate dataset dependencies and file formats for Scalding graph clustering pipelines.",
+    "howItAffectsYourReach": "Feeds the foundational social interaction graphs into cluster authority calculations.",
+    "theGoldenRule": "Internal data source definitions."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/LabeledSimclusters.scala",
+    "inSimpleTerms": "Assigns human-readable category labels and taxonomy mappings to raw numeric SimCluster IDs using text mining and entity extraction.",
+    "whyThisExists": "To connect machine-discovered cluster communities with platform topic hierarchies and ad categories.",
+    "howItAffectsYourReach": "Enables your cluster content to be recommended in explicitly labeled topic feeds and explore pages.",
+    "theGoldenRule": "Use standard, recognizable domain terminology to ensure your cluster receives clean, high-visibility topic labels."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/ProducerNormsAndCounts.scala",
+    "inSimpleTerms": "Calculates L2 vector norms and follower counts for producer accounts across cluster dimensions.",
+    "whyThisExists": "To precompute vector normalization factors required for cosine similarity calculations during graph projection.",
+    "howItAffectsYourReach": "Normalizes producer influence so mega-accounts do not completely overshadow high-quality niche creators in cluster scoring.",
+    "theGoldenRule": "Niche authority matters more than raw follower count; high concentration in specific clusters yields competitive normalized weights."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/TopUsersSimilarityGraph.scala",
+    "inSimpleTerms": "Constructs a similarity graph between top platform creators based on co-engagement and shared audience overlap.",
+    "whyThisExists": "To discover creator clusters and enable 'Similar Creators' recommendations across the platform.",
+    "howItAffectsYourReach": "Places your profile in recommendation carousels shown on profiles of similar creators in your niche.",
+    "theGoldenRule": "Interact with and build mutual relationships with top creators in your domain to enter their similarity subgraphs."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/UpdateKnownFor.scala",
+    "inSimpleTerms": "The flagship Scalding batch job that executes community detection on the global user-creator bipartite engagement graph to update all KnownFor vectors.",
+    "whyThisExists": "To recompute what topics and communities every creator on X is known for across 145,000+ SimClusters.",
+    "howItAffectsYourReach": "This job calculates your foundational topical authority scores; high KnownFor scores here unlock massive out-of-network distribution across the entire platform.",
+    "theGoldenRule": "Maintain extreme topical consistency over weeks and months; this large-scale batch job rewards creators who build deep, concentrated authority in specific niches."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/UpdateKnownForApps.scala",
+    "inSimpleTerms": "Wraps UpdateKnownFor with production execution drivers, parameter parsing, and cluster resource allocations for scheduled Hadoop runs.",
+    "whyThisExists": "To schedule and manage production execution of global KnownFor graph clustering jobs.",
+    "howItAffectsYourReach": "Drives the scheduled batch refresh that updates platform-wide creator authority vectors.",
+    "theGoldenRule": "Internal production runner."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/UserUserFavGraph.scala",
+    "inSimpleTerms": "Builds a weighted user-to-user bipartite graph based on positive favorite (like) interactions over rolling 30-day windows.",
+    "whyThisExists": "To capture positive engagement affinity between accounts rather than passive follow relationships.",
+    "howItAffectsYourReach": "Likes received from authoritative accounts in your niche carry heavy weight in establishing your cluster identity.",
+    "theGoldenRule": "Earn likes from respected peers and leaders in your field; their engagement directly elevates your cluster ranking in the favorite graph."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/UserUserGraph.scala",
+    "inSimpleTerms": "Constructs the unified multi-interaction user-to-user graph combining follows, favorites, retweets, and replies with customizable edge weights.",
+    "whyThisExists": "To provide the master social graph dataset that serves as input to global SimClusters community detection.",
+    "howItAffectsYourReach": "Forms the bedrock of all graph-based recommendations on X; all your audience interactions aggregate into this unified graph.",
+    "theGoldenRule": "Focus on high-quality, authentic audience interactions across all engagement types."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/UserUserNormalizedGraph.scala",
+    "inSimpleTerms": "Applies cosine and TF-IDF style normalizations to user-user interaction edge weights to penalize spammers and power-users with unnatural activity.",
+    "whyThisExists": "To prevent bots and ultra-high-volume accounts from distorting graph clustering algorithms.",
+    "howItAffectsYourReach": "Neutralizes bot and engagement-pod manipulation, rewarding authentic, organically distributed interactions.",
+    "theGoldenRule": "Do not participate in artificial engagement pods or mass-following schemes; normalized graph algorithms discount coordinated activity."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/common/PersistentTweetEmbeddingSource.scala",
+    "inSimpleTerms": "Defines Scalding TypedPipe sources for reading and writing persistent tweet SimClusters embeddings in HDFS/Lzo format.",
+    "whyThisExists": "To provide standardized dataset abstractions for batch jobs reading tweet embedding archives.",
+    "howItAffectsYourReach": "Enables batch jobs to process historical tweet vectors for offline model training and evaluation.",
+    "theGoldenRule": "Internal dataset reader."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/common/QTreeMultiAggregator.scala",
+    "inSimpleTerms": "Computes approximate quantiles and percentiles across multiple metrics simultaneously using Algebird QTrees.",
+    "whyThisExists": "To calculate distribution percentiles (P50, P90, P99) across billions of graph scores efficiently.",
+    "howItAffectsYourReach": "Establishes the statistical score cutoffs that determine top-tier candidate inclusion thresholds.",
+    "theGoldenRule": "Internal statistical aggregator."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/common/TypedRichPipe.scala",
+    "inSimpleTerms": "Enriches Scalding's TypedPipe with helper methods for matrix operations, top-K filtering, and join optimizations.",
+    "whyThisExists": "To simplify complex distributed data transformations in Scalding batch pipelines.",
+    "howItAffectsYourReach": "Enables high-throughput matrix transformations that calculate global cluster and producer weights.",
+    "theGoldenRule": "Maintain consistent, high-volume engagement to ensure your interactions flow efficiently through optimized TypedPipe matrix aggregations."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/common/Util.scala",
+    "inSimpleTerms": "Provides general utility functions for date parsing, HDFS path formatting, and vector serialization in batch jobs.",
+    "whyThisExists": "To eliminate repetitive boilerplate across Scalding graph processing scripts.",
+    "howItAffectsYourReach": "Facilitates date-partitioned batch aggregations that compute daily SimCluster embeddings.",
+    "theGoldenRule": "Rely on predictable posting cadences so daily batch partitioners smoothly index your engagement activity."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/common/matrix/DenseRowMatrix.scala",
+    "inSimpleTerms": "Implements distributed dense row matrix data structures and matrix multiplication algorithms on Scalding TypedPipes.",
+    "whyThisExists": "To support linear algebra operations on dense feature and embedding matrices in Hadoop.",
+    "howItAffectsYourReach": "Powers distributed matrix multiplications used to project user graphs onto topic spaces.",
+    "theGoldenRule": "Foundational linear algebra component."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/common/matrix/SparseMatrix.scala",
+    "inSimpleTerms": "Defines sparse matrix abstractions and operations optimized for high-dimensional, sparse social graph data.",
+    "whyThisExists": "To manipulate massive sparse graphs (millions of rows, 145K columns) with minimal memory overhead.",
+    "howItAffectsYourReach": "Enables efficient sparse matrix transformations that build SimClusters representations.",
+    "theGoldenRule": "Internal sparse matrix engine."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/common/matrix/SparseRowMatrix.scala",
+    "inSimpleTerms": "Provides row-partitioned sparse matrix representations and row-wise vector transformations.",
+    "whyThisExists": "To optimize row-parallel operations such as per-user interest vector calculations.",
+    "howItAffectsYourReach": "Facilitates fast per-user cluster projection across the entire platform user base.",
+    "theGoldenRule": "Internal matrix structure."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/common/matrix/TypedPipeMatrix.scala",
+    "inSimpleTerms": "Bridges Scalding TypedPipe data streams with matrix algebra traits and operations.",
+    "whyThisExists": "To allow seamless conversion between distributed datasets and linear algebra matrix abstractions.",
+    "howItAffectsYourReach": "Powers large-scale distributed matrix multiplications that project user engagement onto cluster spaces.",
+    "theGoldenRule": "Engage across diverse topic clusters to establish multi-dimensional presence across distributed matrix representations."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/EntityEmbeddingFromProducerEmbeddingJob.scala",
+    "inSimpleTerms": "Computes SemanticCore entity cluster embeddings by aggregating the KnownFor embeddings of creators associated with those entities.",
+    "whyThisExists": "To ground abstract entity concepts in real creator community clusters.",
+    "howItAffectsYourReach": "Associating your profile with recognized entities connects your content directly to entity-based recommendation streams.",
+    "theGoldenRule": "Establish domain authority around recognized entities to be included in entity-to-producer cluster mappings."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/EntityToSimClustersEmbeddingsJob.scala",
+    "inSimpleTerms": "Generates SimClusters embeddings for entities by mapping entity-user engagement graphs into cluster space.",
+    "whyThisExists": "To provide high-quality vector representations for topics, entities, and trends across the platform.",
+    "howItAffectsYourReach": "Connects trending entities mentioned in your posts to active user cluster interest vectors.",
+    "theGoldenRule": "Mention and discuss relevant platform entities to tap into their established cluster distribution pipelines."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/GlobalSimClustersLanguageEmbedding.scala",
+    "inSimpleTerms": "Calculates language-level cluster distributions to identify which SimClusters correspond to specific languages and linguistic communities.",
+    "whyThisExists": "To prevent language mismatch in recommendations by tagging clusters with primary language probabilities.",
+    "howItAffectsYourReach": "Ensures that your tweets in a specific language are routed to clusters that match that language's audience.",
+    "theGoldenRule": "Write clearly in your target language to ensure clean linguistic cluster assignment."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/LocaleEntitySimClustersEmbeddingV2Job.scala",
+    "inSimpleTerms": "Generates second-generation localized entity embeddings combining language, country, and cluster affinity data.",
+    "whyThisExists": "To support hyper-localized recommendations for regional news, sports, and cultural events.",
+    "howItAffectsYourReach": "Boosts reach for local creators and regional news within geographic and language-specific recommendation cohorts.",
+    "theGoldenRule": "Create localized content for regional events to capture high-priority localized recommendation streams."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/LocaleEntitySimClustersEmbeddingsJob.scala",
+    "inSimpleTerms": "Legacy batch job computing localized entity cluster embeddings across international locales.",
+    "whyThisExists": "To maintain historical localized entity embeddings for backward compatibility.",
+    "howItAffectsYourReach": "Powers locale-specific candidate filtering and ranking in international markets.",
+    "theGoldenRule": "Maintain clear regional relevance when targeting international audiences."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/ProducerEmbeddingsFromInterestedIn.scala",
+    "inSimpleTerms": "Inverts user InterestedIn profiles to deduce creator KnownFor embeddings based on the aggregate audience that consumes them.",
+    "whyThisExists": "To validate and refine creator authority by looking at the verified interest profiles of their actual engaged audience.",
+    "howItAffectsYourReach": "If your audience consists of users with deep interest in AI, your creator profile will be recognized as an AI authority.",
+    "theGoldenRule": "Cultivate an audience of genuine enthusiasts; your engaged followers' interest profiles define what topic authority the algorithm assigns to you."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/SimilarUsersBySimClustersEmbedding.scala",
+    "inSimpleTerms": "Calculates pairwise cosine similarity between user embeddings to discover similar users and creators across the platform.",
+    "whyThisExists": "To power 'Who to Follow' recommendations and creator peer grouping.",
+    "howItAffectsYourReach": "Surfaces your profile in suggested follow modules when users view profiles of creators with similar embeddings.",
+    "theGoldenRule": "Position yourself alongside leading creators in your niche to appear in their 'Similar Accounts' follow recommendations."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/abuse/AbuseSimclusterFeaturesScaldingJob.scala",
+    "inSimpleTerms": "Extracts abuse, spam, and report features mapped across SimClusters to detect anomalous coordinated harassment or spam clusters.",
+    "whyThisExists": "To identify toxic or abusive sub-communities and prevent them from spreading across recommendation feeds.",
+    "howItAffectsYourReach": "Clusters flagged for high abuse rates receive platform-wide downranking penalties or complete suppression in recommendations.",
+    "theGoldenRule": "Never engage in coordinated harassment or toxic behavior; participating in abusive sub-clusters can severely suppress your account's algorithmic reach."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/abuse/AdhocAbuseSimClusterFeaturesScaldingJob.scala",
+    "inSimpleTerms": "Ad-hoc job for investigating abuse and toxicity metrics across specific experimental cluster subsets.",
+    "whyThisExists": "To analyze emerging spam campaigns and validate trust-and-safety heuristics offline.",
+    "howItAffectsYourReach": "Helps safety teams refine automated demotion filters for problematic content clusters.",
+    "theGoldenRule": "Maintain healthy, constructive community engagement to stay clear of abuse monitoring thresholds."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/abuse/CrossSimClusterFeaturesScaldingJob.scala",
+    "inSimpleTerms": "Calculates cross-cluster interaction patterns (e.g. cross-community brigade attacks and report spikes) across SimClusters.",
+    "whyThisExists": "To detect inter-community brigading and coordinated mass reporting.",
+    "howItAffectsYourReach": "Protects victims of brigading from unfair downranking while penalizing bad-actor brigading clusters.",
+    "theGoldenRule": "Do not encourage your followers to attack or brigade other communities on the platform."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/abuse/DataSources.scala",
+    "inSimpleTerms": "Defines input data sources for abuse tracking jobs, including report logs, block events, and mute events.",
+    "whyThisExists": "To centralize access to trust-and-safety datasets for batch analysis.",
+    "howItAffectsYourReach": "Feeds safety signals that protect the recommendation ecosystem from spam.",
+    "theGoldenRule": "Internal safety data sources."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/abuse/PairedinteractionFeatures.scala",
+    "inSimpleTerms": "Calculates paired interaction statistics (e.g. mutual blocks, quote-tweet hostility) between cluster pairs.",
+    "whyThisExists": "To quantify relational conflict between communities for safety scoring.",
+    "howItAffectsYourReach": "Identifies contentious interactions to prevent toxic conflicts from being algorithmically amplified.",
+    "theGoldenRule": "Foster constructive dialogue rather than hostility to maintain positive recommendation health."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/abuse/SingleSideInteractionTransformation.scala",
+    "inSimpleTerms": "Transforms one-sided negative actions (blocks, mutes, reports) into cluster-level negative affinity features.",
+    "whyThisExists": "To incorporate negative feedback signals into cluster health models.",
+    "howItAffectsYourReach": "High block-to-engagement ratios from users will heavily penalize a post or creator in cluster recommendation scores.",
+    "theGoldenRule": "Avoid divisive, clickbait, or deceptive content that triggers high block and mute rates from readers."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/common/EmbeddingUtil.scala",
+    "inSimpleTerms": "Provides common vector operations, score thresholding, and L2 normalization utilities for embedding batch jobs.",
+    "whyThisExists": "To standardize vector math across all Scalding embedding generation scripts.",
+    "howItAffectsYourReach": "Ensures mathematical consistency when building user, tweet, and author cluster embeddings.",
+    "theGoldenRule": "Internal embedding math utility."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/common/EntityEmbeddingUtil.scala",
+    "inSimpleTerms": "Provides helper functions for aggregating entity embeddings from underlying creator and tweet cluster vectors.",
+    "whyThisExists": "To streamline entity vector calculation across multiple offline batch pipelines.",
+    "howItAffectsYourReach": "Enables seamless connection between platform topics and creator content embeddings.",
+    "theGoldenRule": "Internal entity aggregation helper."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/common/ExternalDataSources.scala",
+    "inSimpleTerms": "Defines external dataset locations (HDFS paths, Manhattan datasets, Scribe logs) used by embedding jobs.",
+    "whyThisExists": "To maintain a single source of truth for external dataset references across Scalding pipelines.",
+    "howItAffectsYourReach": "Routes the canonical raw engagement datasets that feed all offline SimClusters embedding jobs.",
+    "theGoldenRule": "Ensure account safety and good standing so your historical data flows cleanly into primary training pipelines."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/common/SimClustersEmbeddingJob.scala",
+    "inSimpleTerms": "Base trait and execution framework for all Scalding jobs that compute SimClusters sparse embeddings.",
+    "whyThisExists": "To enforce uniform logging, parameter handling, and data output conventions across batch embedding jobs.",
+    "howItAffectsYourReach": "Governs the batch execution framework that calculates platform-wide cluster embeddings.",
+    "theGoldenRule": "Internal batch execution framework."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/producer/AggregatableFavBasedProducerEmbeddings.scala",
+    "inSimpleTerms": "Computes producer KnownFor cluster embeddings weighted by the favorite (like) interactions their posts receive.",
+    "whyThisExists": "To identify creator topical authority based on positive appreciation and likes from domain communities.",
+    "howItAffectsYourReach": "Likes received on your on-topic tweets directly increase your KnownFor authority in that topic's SimClusters.",
+    "theGoldenRule": "Earn likes from real users in your niche to boost your author KnownFor cluster score."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/producer/AggregatableFollowBasedProducerEmbeddings.scala",
+    "inSimpleTerms": "Calculates producer KnownFor embeddings derived purely from follower graph structure and follow edges.",
+    "whyThisExists": "To capture durable, long-term creator authority reflected in follow graph topology.",
+    "howItAffectsYourReach": "Gaining followers who are active in a specific cluster establishes your durable KnownFor authority in that domain.",
+    "theGoldenRule": "Build a loyal following within your niche to establish persistent follow-based cluster authority."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/producer/AggregatableLogFavBasedProducerEmbeddings.scala",
+    "inSimpleTerms": "Calculates favorite-based producer embeddings using logarithmic scaling on favorite counts to dampen extreme outliers.",
+    "whyThisExists": "To prevent viral one-hit-wonder tweets from artificially inflating a creator's permanent topical authority.",
+    "howItAffectsYourReach": "Rewards consistent, sustained positive engagement over time rather than isolated viral flukes.",
+    "theGoldenRule": "Publish consistently high-quality content; log-scaled formulas reward regular engagement over sporadic viral hits."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/producer/AggregatableProducerEmbeddings.scala",
+    "inSimpleTerms": "Combines follow-based and favorite-based producer embeddings into a unified, aggregatable KnownFor vector.",
+    "whyThisExists": "To synthesize structural follow graphs with behavioral engagement graphs into a single master author profile.",
+    "howItAffectsYourReach": "Produces the primary author KnownFor embedding used by Home Mixer and SimClusters candidate sources.",
+    "theGoldenRule": "Cultivate both follower growth and active daily likes to maximize your unified producer embedding weight."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/tfg/EngagementWeightedTfgBasedTopicEmbeddingsJob.scala",
+    "inSimpleTerms": "Generates Topic Follow Graph (TFG) topic embeddings weighted by active user engagement on tweets within those topics.",
+    "whyThisExists": "To align topic definitions with real-world engagement patterns rather than static taxonomy trees.",
+    "howItAffectsYourReach": "Connects your engaged tweets to platform topic channels, distributing them to topic followers.",
+    "theGoldenRule": "Drive active discussion under relevant topic tags to qualify for topic feed inclusion."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/tfg/FavInferredLanguageTfgBasedTopicEmbeddings.scala",
+    "inSimpleTerms": "Computes language-specific topic embeddings based on favorite graphs and inferred user language preferences.",
+    "whyThisExists": "To support localized topic recommendations across global multilingual audiences.",
+    "howItAffectsYourReach": "Ensures your tweets match topic followers in your specific language region.",
+    "theGoldenRule": "Post in your audience's primary language to maximize localized topic matching."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/tfg/FavTfgBasedTopicEmbeddings.scala",
+    "inSimpleTerms": "Generates topic embeddings based on the intersection of Topic Follow Graphs and user favorite interactions.",
+    "whyThisExists": "To identify which topics users actively like content about, beyond simply following the topic.",
+    "howItAffectsYourReach": "Surfaces your content in topic feeds where users have proven, active like engagement history.",
+    "theGoldenRule": "Deliver high-value insights that prompt topic followers to like your tweets."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/tfg/InferredLanguageTfgBasedTopicEmbeddingsBaseApp.scala",
+    "inSimpleTerms": "Base application framework for generating language-inferred topic follow graph embeddings at scale.",
+    "whyThisExists": "To standardize multilingual topic graph processing across Hadoop clusters.",
+    "howItAffectsYourReach": "Underpins multilingual topic recommendation pipelines.",
+    "theGoldenRule": "Internal multilingual batch processing harness."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/tfg/LogFavTfgBasedTopicEmbeddings.scala",
+    "inSimpleTerms": "Applies logarithmic dampening to favorite counts when computing Topic Follow Graph embeddings.",
+    "whyThisExists": "To balance topic representations and prevent hyper-viral individual tweets from distorting topic cluster definitions.",
+    "howItAffectsYourReach": "Ensures diverse creators can be featured in topic feeds rather than only mega-viral accounts.",
+    "theGoldenRule": "Consistent quality earns reliable placement in topic recommendations."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/tfg/TfgBasedTopicEmbeddingsBaseApp.scala",
+    "inSimpleTerms": "Base execution driver for all Topic Follow Graph embedding jobs in Scalding.",
+    "whyThisExists": "To provide reusable parameter parsing, validation, and HDFS output writing for topic embedding pipelines.",
+    "howItAffectsYourReach": "Executes the core topic-follow graph projections that link topics to creator clusters.",
+    "theGoldenRule": "Publish insightful commentary under recognized topics to ensure topic embedding pipelines associate your tweets with high-affinity clusters."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/twice/InterestedInTwice.scala",
+    "inSimpleTerms": "Computes second-order (two-hop) user InterestedIn embeddings by propagating user interests through shared follower graphs.",
+    "whyThisExists": "To expand user interest profiles for cold-start or low-activity users who have few direct engagements.",
+    "howItAffectsYourReach": "Allows your content to be recommended to low-activity users who share mutual network connections with your active fans.",
+    "theGoldenRule": "Strong engagement from well-connected followers ripples outward to recommend your tweets to their extended network."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/embedding/twice/InterestedInTwiceBaseApp.scala",
+    "inSimpleTerms": "Application driver for running distributed two-hop InterestedIn embedding generation on Hadoop.",
+    "whyThisExists": "To execute two-hop graph propagation across multi-billion-edge datasets.",
+    "howItAffectsYourReach": "Runs the two-hop user interest expansion job that surfaces your content to friends-of-followers.",
+    "theGoldenRule": "Engage with active community hubs to maximize two-hop interest propagation across shared follower networks."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/evaluation/CandidateEvaluationBase.scala",
+    "inSimpleTerms": "Base class for offline candidate evaluation pipelines, calculating precision, recall, and NDCG against held-out user engagement sets.",
+    "whyThisExists": "To rigorously evaluate recommendation quality offline before deploying model iterations.",
+    "howItAffectsYourReach": "Ensures that ranking updates favor genuinely relevant and high-engagement content.",
+    "theGoldenRule": "Internal evaluation framework."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/evaluation/EvaluationMetricHelper.scala",
+    "inSimpleTerms": "Provides helper functions to compute ranking evaluation metrics such as Mean Average Precision (MAP) and Reciprocal Rank.",
+    "whyThisExists": "To standardize offline scoring metrics across recommendation experiments.",
+    "howItAffectsYourReach": "Standardizes the precision and ranking evaluation metrics used to accept or reject new recommendation models.",
+    "theGoldenRule": "Strive for high click-through and interaction rates; these evaluation metrics directly validate models that rank high-CTR posts higher."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/evaluation/EvaluationReferenceDataExtraction.scala",
+    "inSimpleTerms": "Extracts historical user engagement ground-truth datasets used as reference benchmarks for offline model evaluations.",
+    "whyThisExists": "To create golden benchmark datasets for recommendation algorithm testing.",
+    "howItAffectsYourReach": "Extracts historical ground-truth engagement datasets that define model ranking targets.",
+    "theGoldenRule": "Deliver compelling content that earns bookmarks and retweets, forming the golden positive training signal in benchmark datasets."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/evaluation/LabelCorrelationsHelper.scala",
+    "inSimpleTerms": "Calculates statistical correlation coefficients between model similarity scores and real user engagement labels.",
+    "whyThisExists": "To verify that higher algorithmic similarity scores genuinely correlate with higher user satisfaction and engagement.",
+    "howItAffectsYourReach": "Validates that high-scoring posts perform well with real viewers.",
+    "theGoldenRule": "Internal correlation analysis."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/evaluation/SimClustersEvaluationAdhocApp.scala",
+    "inSimpleTerms": "Ad-hoc Scalding application for executing custom evaluation suites across experimental SimClusters variants.",
+    "whyThisExists": "To allow ML engineers to rapidly evaluate novel clustering and candidate generation prototypes.",
+    "howItAffectsYourReach": "Enables offline benchmarking of experimental cluster variants against real user interaction data.",
+    "theGoldenRule": "Focus on deep niche relevance; ad-hoc model evaluations constantly test cluster purity and topic precision."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/inferred_entities/InferredEntities.scala",
+    "inSimpleTerms": "Defines data schemas and scoring logic for inferring an account's associated semantic entities from their cluster memberships.",
+    "whyThisExists": "To link creator accounts to formal SemanticCore knowledge-graph entities automatically.",
+    "howItAffectsYourReach": "Qualifies your account for entity-level search indexing and topic carousels without manual tagging.",
+    "theGoldenRule": "Write about well-defined subjects so automated systems infer the correct entities for your profile."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/inferred_entities/InferredEntitiesFromInterestedIn.scala",
+    "inSimpleTerms": "Infers entity affinities for users by projecting their cluster InterestedIn vectors onto Entity-to-Cluster translation matrices.",
+    "whyThisExists": "To predict which platform entities a user is interested in based on their behavioral cluster profile.",
+    "howItAffectsYourReach": "Matches your entity-related tweets to users whose behavioral profiles suggest high interest in those entities.",
+    "theGoldenRule": "Focus on recognizable entities and themes to match inferred user interest profiles."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/inferred_entities/InferredSemanticCoreEntitiesFromKnownFor.scala",
+    "inSimpleTerms": "Infers creator domain entity expertise from their KnownFor cluster embeddings.",
+    "whyThisExists": "To establish verified creator authority on specific SemanticCore entities.",
+    "howItAffectsYourReach": "Designates your account as an authoritative entity source, boosting your posts under entity searches and topic tabs.",
+    "theGoldenRule": "Establish yourself as a domain expert to be algorithmically recognized as an entity authority."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/inferred_entities/ProdSources.scala",
+    "inSimpleTerms": "Defines production dataset sources and HDFS paths for inferred entity batch pipelines.",
+    "whyThisExists": "To provide centralized dataset references for entity inference jobs.",
+    "howItAffectsYourReach": "Supplies production data streams used to map semantic entities to behavioral user clusters.",
+    "theGoldenRule": "Maintain active engagement around clear topics so production data sources supply rich entity context to inference engines."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/mbcg/AllFeatures.scala",
+    "inSimpleTerms": "Defines ML feature schemas for Model-Based Collaborative Filtering (MBCG) graph embedding models.",
+    "whyThisExists": "To assemble graph features for neural collaborative filtering models.",
+    "howItAffectsYourReach": "Feeds collaborative filtering models that recommend accounts and tweets based on latent graph patterns.",
+    "theGoldenRule": "Internal feature schema."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/mbcg/RecordAdapters.scala",
+    "inSimpleTerms": "Converts graph interaction records into DataRecord formats for training collaborative filtering models.",
+    "whyThisExists": "To bridge Hadoop datasets with Twitter ML training pipelines.",
+    "howItAffectsYourReach": "Converts graph interactions into ML DataRecords used to train latent collaborative filtering models.",
+    "theGoldenRule": "Encourage multi-modal user interactions (replies, retweets, likes) to generate rich training records for collaborative filtering."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/mbcg/TweetEmbeddingGenerationJob.scala",
+    "inSimpleTerms": "Generates dense collaborative-filtering tweet embeddings using Model-Based Collaborative Filtering graph models.",
+    "whyThisExists": "To produce dense latent embeddings for tweets based on multi-relational graph co-occurrence.",
+    "howItAffectsYourReach": "Powers dense vector candidate matching for out-of-network recommendation feeds.",
+    "theGoldenRule": "Engage diverse audiences to build strong collaborative filtering latent embeddings."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/mbcg/UserEmbeddingGenerationJob.scala",
+    "inSimpleTerms": "Generates user latent embeddings from collaborative filtering graph models for personalized retrieval.",
+    "whyThisExists": "To represent user preferences in a dense latent space for vector retrieval.",
+    "howItAffectsYourReach": "Matches your tweets to users with aligned latent collaborative filtering embeddings.",
+    "theGoldenRule": "Internal user representation pipeline."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/multi_type_graph/assemble_multi_type_graph/AssembleMultiTypeGraph.scala",
+    "inSimpleTerms": "Assembles heterogeneous multi-type graph datasets linking users, tweets, topics, and entities with typed interaction edges.",
+    "whyThisExists": "To create a unified multi-relational graph dataset for advanced graph neural network training.",
+    "howItAffectsYourReach": "Links all your platform interactions (likes, retweets, topic mentions) into a comprehensive knowledge graph.",
+    "theGoldenRule": "Maintain high engagement across multiple interaction formats to strengthen your graph centrality."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/multi_type_graph/assemble_multi_type_graph/AssembleMultiTypeGraphApp.scala",
+    "inSimpleTerms": "Production application driver for the distributed multi-type graph assembly Scalding job.",
+    "whyThisExists": "To execute large-scale multi-type graph assembly on scheduled Hadoop workflows.",
+    "howItAffectsYourReach": "Orchestrates the global assembly of multi-type graphs connecting users, tweets, and topics.",
+    "theGoldenRule": "Build multi-faceted engagement (follows, mentions, favorites) to maximize your node centrality in the master multi-type graph."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/multi_type_graph/assemble_multi_type_graph/AssembleMultiTypeGraphBaseApp.scala",
+    "inSimpleTerms": "Base execution trait providing parameter parsing and dataset validation for multi-type graph assembly.",
+    "whyThisExists": "To standardize graph assembly workflows.",
+    "howItAffectsYourReach": "Provides base workflow configuration for distributed multi-relational graph construction.",
+    "theGoldenRule": "Cultivate reciprocal community interactions to strengthen edge weights across multi-type graph partitions."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/multi_type_graph/assemble_multi_type_graph/Config.scala",
+    "inSimpleTerms": "Defines configuration constants, edge weight multipliers, and filtering thresholds for multi-type graph construction.",
+    "whyThisExists": "To configure interaction weights across follows, retweets, likes, and topic follows.",
+    "howItAffectsYourReach": "Sets the relative importance of different interaction types in the unified platform graph.",
+    "theGoldenRule": "Prioritize high-weight interactions (retweets, replies) over lightweight interactions (passive views)."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_data_conversion/AsyncMeterLimiter.scala",
+    "inSimpleTerms": "Implements asynchronous rate limiting and throttling for batch jobs writing massive datasets to online Manhattan clusters.",
+    "whyThisExists": "To prevent offline batch data uploads from overwhelming online database clusters during high-traffic hours.",
+    "howItAffectsYourReach": "Ensures newly calculated cluster models are safely loaded into production without causing database downtime.",
+    "theGoldenRule": "Internal database protection utility."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_data_conversion/ClusterDetails20M145K2020FlattenJob.scala",
+    "inSimpleTerms": "Flattens and optimizes cluster details metadata into key-value byte formats for fast online retrieval in the 20M_145K_2020 model.",
+    "whyThisExists": "To convert complex nested batch data into compact, sub-millisecond readable online key-value stores.",
+    "howItAffectsYourReach": "Makes cluster definitions instantly readable during real-time timeline recommendation scoring.",
+    "theGoldenRule": "Internal data format optimizer."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_data_conversion/HydrationHelper.scala",
+    "inSimpleTerms": "Provides helper functions to hydrate raw entity IDs with user profile and tweet metadata during offline batch conversions.",
+    "whyThisExists": "To assemble enriched datasets for offline analysis and online dataset preparation.",
+    "howItAffectsYourReach": "Enriches raw batch cluster assignments with profile metadata before publishing to online storage.",
+    "theGoldenRule": "Keep account profiles and metadata up to date so offline conversion pipelines hydrate complete creator features."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_data_conversion/InterestedIn20M145K2020FlattenJob.scala",
+    "inSimpleTerms": "Converts user InterestedIn embeddings for the 20M_145K_2020 model into flattened binary key-value datasets for Manhattan upload.",
+    "whyThisExists": "To publish newly computed user interest embeddings to production Manhattan storage tiers.",
+    "howItAffectsYourReach": "Uploads user interest profiles that determine which out-of-network candidate tweets users will see.",
+    "theGoldenRule": "Internal batch-to-online data publisher."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_data_conversion/InterestedIn20M145K2020FlattenTransform.scala",
+    "inSimpleTerms": "Defines transformation functions for serializing sparse user interest vectors into compact Thrift and binary payloads.",
+    "whyThisExists": "To minimize network transfer size and serialization CPU overhead.",
+    "howItAffectsYourReach": "Transforms and compresses 145K-dimensional user interest vectors for lightning-fast online retrieval.",
+    "theGoldenRule": "Consistently engage with niche content to ensure your audience's compressed interest vectors remain strongly aligned with your topics."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_data_conversion/KnownFor20M145K2020FlattenJob.scala",
+    "inSimpleTerms": "Flattens and serializes creator KnownFor authority embeddings for the 20M_145K_2020 model for Manhattan storage deployment.",
+    "whyThisExists": "To publish updated creator domain authority scores to online recommendation servers.",
+    "howItAffectsYourReach": "Pushes your updated topical authority scores live to production recommendation clusters.",
+    "theGoldenRule": "Internal production authority deployment pipeline."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_data_conversion/KnownFor20M145K2020FlattenTransform.scala",
+    "inSimpleTerms": "Implements binary transformations for compressing creator KnownFor sparse cluster embeddings.",
+    "whyThisExists": "To ensure maximum compression and speed when reading author authority vectors online.",
+    "howItAffectsYourReach": "Compresses creator KnownFor sparse cluster embeddings for efficient real-time ranking lookups.",
+    "theGoldenRule": "Focus on 1-2 core expertise areas to ensure your compressed KnownFor vector preserves maximal mathematical weight."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_job/OfflineTweetRecommendation.scala",
+    "inSimpleTerms": "Precomputes offline candidate recommendations by intersecting user InterestedIn profiles with cluster Top-K tweets in batch.",
+    "whyThisExists": "To generate pre-cached recommendation candidates for fast retrieval during push notification delivery and cold-start feed loads.",
+    "howItAffectsYourReach": "Precomputed recommendations power push notifications and email digests, driving massive external traffic back to your posts.",
+    "theGoldenRule": "Top-ranking cluster tweets are captured by this batch job and delivered directly into user push notifications."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_job/SimClustersOfflineJob.scala",
+    "inSimpleTerms": "The core offline recommendation generation job that pairs user interest embeddings with candidate tweet clusters.",
+    "whyThisExists": "To generate billions of personalized offline candidate pairs at scale in Hadoop.",
+    "howItAffectsYourReach": "Drives offline recommendation channels that surface your tweets to users when they are not actively browsing.",
+    "theGoldenRule": "Maintain strong cluster scores to be selected across large-scale offline recommendation runs."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_job/SimClustersOfflineJobAdhocApp.scala",
+    "inSimpleTerms": "Ad-hoc execution application for running experimental offline recommendation pipelines.",
+    "whyThisExists": "To evaluate offline recommendation algorithms on custom user cohorts.",
+    "howItAffectsYourReach": "Enables testing of offline recommendation pipelines on custom candidate cohorts.",
+    "theGoldenRule": "Maintain consistent quality across all posts; experimental offline recommendation runs sample diverse candidate pools."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_job/SimClustersOfflineJobScheduledApp.scala",
+    "inSimpleTerms": "Production scheduled driver that executes offline recommendation jobs on a recurring cron schedule.",
+    "whyThisExists": "To maintain fresh offline recommendation candidates for push notifications 24/7.",
+    "howItAffectsYourReach": "Keeps your tweets queued for recurring push notification delivery to relevant audiences.",
+    "theGoldenRule": "Internal scheduled workflow runner."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_job/SimClustersOfflineJobUtil.scala",
+    "inSimpleTerms": "Provides utility methods for filtering and formatting offline recommendation candidate pairs.",
+    "whyThisExists": "To streamline candidate deduplication and thresholding in offline recommendation jobs.",
+    "howItAffectsYourReach": "Applies candidate deduplication and thresholding for push notification and digest recommendations.",
+    "theGoldenRule": "Avoid spammy or duplicate content; offline deduplication utilities filter out repetitive candidate pairs."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_job/adhoc/SimClustersTweetEmbeddingAdhocApp.scala",
+    "inSimpleTerms": "Ad-hoc tool for inspecting and generating SimClusters embeddings for specific tweet subsets.",
+    "whyThisExists": "To allow engineers to debug tweet vector representations and cluster assignments manually.",
+    "howItAffectsYourReach": "Allows diagnostic generation and manual verification of SimClusters embeddings for candidate tweets.",
+    "theGoldenRule": "Ensure clear semantic focus in tweet copy so embedding inspection tools reflect accurate topic cluster weights."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_job/adhoc/TweetSimilarityEvaluationAdhocApp.scala",
+    "inSimpleTerms": "Ad-hoc application for evaluating tweet-to-tweet semantic similarity models on sample data.",
+    "whyThisExists": "To benchmark similarity algorithms before production integration.",
+    "howItAffectsYourReach": "Evaluates tweet-to-tweet semantic similarity models against historical engagement data.",
+    "theGoldenRule": "Provide distinct perspectives in popular conversations to stand out in semantic similarity evaluations."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/offline_tweets/ClusterTopMediaTweetsJob.scala",
+    "inSimpleTerms": "Extracts and ranks the top multimedia tweets (photos, videos, GIFs) for each SimCluster dimension.",
+    "whyThisExists": "To populate dedicated media carousels and video tabs with high-quality visual content per topic.",
+    "howItAffectsYourReach": "Publishing engaging video and image content in your niche allows your posts to be selected as top media tweets for your cluster.",
+    "theGoldenRule": "Include high-quality visual media with your on-topic posts to dominate multimedia cluster rankings."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/optout/InterestedInOptOut.scala",
+    "inSimpleTerms": "Filters out users who have opted out of personalized recommendations or data tracking from InterestedIn pipelines.",
+    "whyThisExists": "To enforce user privacy preferences and GDPR/CCPA regulatory compliance.",
+    "howItAffectsYourReach": "Excludes opted-out users from personalized cluster matching, serving them chronological or generic feeds instead.",
+    "theGoldenRule": "Internal privacy compliance filter."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/optout/KnownForOptOut.scala",
+    "inSimpleTerms": "Removes accounts that have requested exclusion from algorithmic profiling or recommendation indexes from KnownFor tables.",
+    "whyThisExists": "To respect creator privacy settings and account exclusion requests.",
+    "howItAffectsYourReach": "Opting out removes your profile from out-of-network recommendation channels completely.",
+    "theGoldenRule": "Ensure your account settings allow personalization and recommendation indexing to maximize reach."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/optout/SimClustersOptOutUtil.scala",
+    "inSimpleTerms": "Provides helper functions for joining user opt-out datasets with SimClusters processing pipelines.",
+    "whyThisExists": "To standardize privacy opt-out filtering across all Scalding graph jobs.",
+    "howItAffectsYourReach": "Enforces user privacy preferences and excludes opted-out users from cluster matching.",
+    "theGoldenRule": "Respect platform safety and privacy guidelines to ensure your account remains in the active personalization index."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/topic_recommendations/GeoPopularTopicsApp.scala",
+    "inSimpleTerms": "Computes geographically trending and popular topics across specific cities, regions, and countries.",
+    "whyThisExists": "To power location-based topic recommendations and regional explore trends.",
+    "howItAffectsYourReach": "Boosts local reach for tweets participating in regionally trending topic discussions.",
+    "theGoldenRule": "Participate in local conversations during major regional events to capture geo-targeted topic distribution."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/topic_recommendations/ProducersForTopicsFromTopicFollowGraph.scala",
+    "inSimpleTerms": "Identifies top creators for topics based on the intersection of Topic Follow Graphs and user follow graphs.",
+    "whyThisExists": "To recommend authoritative creators to users who follow specific topics.",
+    "howItAffectsYourReach": "Qualifying as a top creator for a topic surfaces your profile directly to everyone who follows that topic on X.",
+    "theGoldenRule": "Establish yourself as a go-to creator in your topic to be featured in 'Who to Follow in this Topic' prompts."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/topic_recommendations/SimilarTopicsFromTopicFollowGraphApp.scala",
+    "inSimpleTerms": "Calculates similarity between topics based on shared follower overlap in Topic Follow Graphs.",
+    "whyThisExists": "To power topic-to-topic recommendations and related topic navigation.",
+    "howItAffectsYourReach": "Enables cross-topic discovery: followers of related topics can discover your content through topic affinity links.",
+    "theGoldenRule": "Create bridge content that connects related topics to capture audience overlap."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/topic_recommendations/TopicsForProducersFromEM.scala",
+    "inSimpleTerms": "Applies Expectation-Maximization (EM) clustering to assign platform topics to creators based on their engagement patterns.",
+    "whyThisExists": "To accurately map creators to formal topic taxonomies using probabilistic clustering.",
+    "howItAffectsYourReach": "Assigns official topic badges and topic indexing to your profile, driving topic-based impressions.",
+    "theGoldenRule": "Consistent topic focus maximizes the probabilistic certainty of your EM topic assignment."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/topic_recommendations/TopicsForProducersUtils.scala",
+    "inSimpleTerms": "Provides helper functions for thresholding and formatting creator-to-topic mappings.",
+    "whyThisExists": "To clean and filter noisy topic assignments before publishing.",
+    "howItAffectsYourReach": "Filters and formats creator-to-topic associations before publishing to recommendation stores.",
+    "theGoldenRule": "Stick to dedicated topic themes to pass thresholding filters that assign official topic badges to creator accounts."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/topic_recommendations/model_based_topic_recommendations/DataSources.scala",
+    "inSimpleTerms": "Defines input data sources for model-based topic recommendation training pipelines.",
+    "whyThisExists": "To centralize dataset references for ML topic recommendation models.",
+    "howItAffectsYourReach": "Defines input dataset references for training neural topic recommendation models.",
+    "theGoldenRule": "Maintain high-quality topic discussions to generate clean positive training examples in topic dataset pipelines."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/topic_recommendations/model_based_topic_recommendations/UserFeatures.scala",
+    "inSimpleTerms": "Extracts user-level behavioral features (account age, topic follows, engagement history) for topic recommendation models.",
+    "whyThisExists": "To provide rich user context for predicting topic affinity.",
+    "howItAffectsYourReach": "Extracts user behavioral features that power personalized topic follow recommendations.",
+    "theGoldenRule": "Cultivate long-term engaged followers whose strong user feature vectors amplify the distribution of your shared topics."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/topic_recommendations/model_based_topic_recommendations/UserTopicDataRecordAdapter.scala",
+    "inSimpleTerms": "Adapts user-topic interaction data into ML DataRecord format for training topic ranking algorithms.",
+    "whyThisExists": "To prepare training datasets for neural topic recommendation models.",
+    "howItAffectsYourReach": "Formats user-topic interaction histories into machine learning training datasets.",
+    "theGoldenRule": "Produce engaging content in popular topics to generate positive user-topic training pairs in ML adapters."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/topic_recommendations/model_based_topic_recommendations/UserTopicModellingTrainingDataCollectionJob.scala",
+    "inSimpleTerms": "Collects training examples of positive and negative user topic follows and dismissals.",
+    "whyThisExists": "To train supervised machine learning models that predict which topics a user will follow.",
+    "howItAffectsYourReach": "Powers the topic recommendation models that connect users to topic feeds containing your content.",
+    "theGoldenRule": "Internal ML training data collection job."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/tweet_similarity/DatasetTopKAnalysisJob.scala",
+    "inSimpleTerms": "Analyzes the distribution and quality of Top-K candidate tweets across SimClusters datasets.",
+    "whyThisExists": "To detect cluster starvation or over-saturation in candidate generation pipelines.",
+    "howItAffectsYourReach": "Ensures cluster candidate pools remain healthy and balanced across both large and small topic niches.",
+    "theGoldenRule": "Internal candidate pool health monitoring."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/tweet_similarity/TrainingDataCollectionJob.scala",
+    "inSimpleTerms": "Collects pairs of tweets that received co-engagements (liked by the same users) to create training data for tweet similarity models.",
+    "whyThisExists": "To generate massive training datasets of semantically related tweet pairs for deep learning rankers.",
+    "howItAffectsYourReach": "Co-engagements on your tweet and another popular post train the algorithm to recognize them as related, enabling cross-tweet recommendation.",
+    "theGoldenRule": "Encourage deep discussion that attracts co-engagements from users who follow top accounts in your space."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/tweet_similarity/TrainingDataCollectionUtil.scala",
+    "inSimpleTerms": "Provides helper functions for sampling and filtering co-engaged tweet pairs during training data extraction.",
+    "whyThisExists": "To prevent training data skew from viral megathreads.",
+    "howItAffectsYourReach": "Samples and filters co-engaged tweet pairs for training semantic similarity rankers.",
+    "theGoldenRule": "Encourage cross-pollination of discussions; co-engaged tweet pairs train recommendation models to link related subjects."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/tweet_similarity/TweetPairFeatureHydrationUtil.scala",
+    "inSimpleTerms": "Hydrates candidate tweet pairs with text embeddings, entity overlap, and SimClusters cosine similarity features.",
+    "whyThisExists": "To construct comprehensive feature vectors for tweet similarity ML models.",
+    "howItAffectsYourReach": "Supplies semantic features that determine whether your post is recommended under related tweets.",
+    "theGoldenRule": "Use rich contextual vocabulary so feature extractors capture strong semantic overlap with trending discussions."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/tweet_similarity/TweetPairLabelCollectionUtil.scala",
+    "inSimpleTerms": "Collects ground-truth interaction labels (clicks, likes, retweets) on pairs of tweets shown together in recommendation modules.",
+    "whyThisExists": "To create supervised training targets for optimizing tweet recommendation rankers.",
+    "howItAffectsYourReach": "Positive user clicks on recommended tweet pairs directly reinforce the recommendation strength between those two topics.",
+    "theGoldenRule": "Engage thoughtfully with high-relevance posts to build positive training feedback loops."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/tweet_similarity/UnhydratedPairsCollectionJob.scala",
+    "inSimpleTerms": "Extracts raw pairs of candidate tweet IDs from production recommendation logs for offline evaluation.",
+    "whyThisExists": "To capture unhydrated candidate interaction pairs before memory buffers expire.",
+    "howItAffectsYourReach": "Extracts raw candidate tweet pairs from production logs for offline similarity model training.",
+    "theGoldenRule": "Drive high click-through and dwell time on recommended posts to generate strong positive pair logs."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/tweet_similarity/evaluation/ModelEvalAdhocApp.scala",
+    "inSimpleTerms": "Ad-hoc application for evaluating tweet similarity ML models on test holdout datasets.",
+    "whyThisExists": "To validate model performance metrics (AUC, NDCG) before production deployment.",
+    "howItAffectsYourReach": "Benchmarks offline tweet similarity models against ground-truth evaluation datasets.",
+    "theGoldenRule": "Craft articulate, context-rich tweets that score high semantic similarity with core audience interests."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/tweet_similarity/evaluation/RUXLandingDdgAnalysisAdhocApp.scala",
+    "inSimpleTerms": "Analyzes recommendation engagement and dwell time on logged-out and landing page recommendation modules.",
+    "whyThisExists": "To optimize content recommendations for logged-out and new visitor landing pages.",
+    "howItAffectsYourReach": "Top viral tweets with broad cluster appeal are featured on logged-out landing pages, driving massive discovery from unregistered visitors.",
+    "theGoldenRule": "Craft broadly appealing, high-impact posts that qualify for logged-out viral showcase distribution."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/update_known_for/UpdateKnownFor20M145K2020.scala",
+    "inSimpleTerms": "Executes the Updated KnownFor community detection pipeline specifically for the 20M_145K_2020 model configuration.",
+    "whyThisExists": "To generate the active production 2020 edition of 145,000 SimClusters KnownFor embeddings across 20 million creator accounts.",
+    "howItAffectsYourReach": "Calculates the core authority scores that govern your account's distribution across the entire modern recommendation stack.",
+    "theGoldenRule": "Maintain dedicated, high-quality output in your primary domain to secure top-tier KnownFor authority in the 2020 cluster model."
+  },
+  {
+    "path": "simclusters/simclusters_v2/scalding/update_known_for/UpdateKnownForSBFRunner.scala",
+    "inSimpleTerms": "Runs the Scalding SBF (Sparse Bipartite Factorization) graph algorithm to discover SimClusters communities from user engagement graphs.",
+    "whyThisExists": "To factorize massive bipartite engagement matrices into low-rank sparse cluster representations.",
+    "howItAffectsYourReach": "Performs the core mathematical factorization that discovers the 145,000 clusters structuring all content on X.",
+    "theGoldenRule": "Authentic, concentrated community interaction fuels the sparse factorization algorithm that assigns you cluster authority."
+  },
+  {
+    "path": "simclusters/simclusters_v2/score/AggregatedScoreStore.scala",
+    "inSimpleTerms": "Provides readable store interfaces for fetching precomputed aggregated affinity scores between entities across multiple interaction types.",
+    "whyThisExists": "To retrieve composite interaction scores in a single key-value lookup without real-time computation overhead.",
+    "howItAffectsYourReach": "Determines historical user-topic and user-author affinity scores used to bias candidate generation.",
+    "theGoldenRule": "Consistent positive engagements build durable aggregated scores that keep you high in viewer affinity lists."
+  },
+  {
+    "path": "simclusters/simclusters_v2/score/Score.scala",
+    "inSimpleTerms": "Defines the value class wrapper for numerical match scores, providing formatting and conversion utilities.",
+    "whyThisExists": "To enforce type safety and avoid unboxed floating-point precision bugs across score evaluation services.",
+    "howItAffectsYourReach": "Encapsulates the raw relevance score that ranks candidates in feed generation.",
+    "theGoldenRule": "Internal score wrapper."
+  },
+  {
+    "path": "simclusters/simclusters_v2/score/ScoreFacadeStore.scala",
+    "inSimpleTerms": "Serves as a unified facade over underlying score calculation stores, embedding pair stores, and aggregated stores.",
+    "whyThisExists": "To simplify client access to multi-tier scoring pipelines through a single, resilient interface.",
+    "howItAffectsYourReach": "Routes scoring requests to the fastest available store, ensuring prompt score attachment to candidate tweets.",
+    "theGoldenRule": "Internal scoring facade."
+  },
+  {
+    "path": "simclusters/simclusters_v2/score/ScoreId.scala",
+    "inSimpleTerms": "Defines identifiers for score lookups, linking source entity IDs, target entity IDs, model versions, and score metric types.",
+    "whyThisExists": "To uniquely identify and cache score computations across heterogeneous entity pairs.",
+    "howItAffectsYourReach": "Identifies the affinity score between a viewer and your post/profile in cache tiers.",
+    "theGoldenRule": "Internal score identifier."
+  },
+  {
+    "path": "simclusters/simclusters_v2/score/ScoreStore.scala",
+    "inSimpleTerms": "Implements the core score lookup and calculation store, resolving embedding pairs and computing on-the-fly dot products when cached scores are missing.",
+    "whyThisExists": "To deliver fast, reliable entity-pair score resolution with graceful fallback to real-time vector dot products.",
+    "howItAffectsYourReach": "Calculates the real-time match score between an active user and candidate tweets during timeline ranking.",
+    "theGoldenRule": "Drive broad interaction across related sub-clusters to ensure high dot product scores even when exact cache entries miss."
+  },
+  {
+    "path": "simclusters/simclusters_v2/score/SimClustersEmbeddingPairScoreStore.scala",
+    "inSimpleTerms": "Fetches embedding pairs for source and target entities (e.g. user interest and tweet embedding) and calculates normalized cosine similarity scores.",
+    "whyThisExists": "To perform dynamic score evaluation when precomputed score caches expire or do not exist.",
+    "howItAffectsYourReach": "Computes the exact vector overlap between a reader's interests and your tweet, determining candidate viability.",
+    "theGoldenRule": "Ensure your content clearly reflects the interests of your target demographic to maximize embedding overlap."
+  },
+  {
+    "path": "simclusters/simclusters_v2/score/WeightedSumAggregatedScoreStore.scala",
+    "inSimpleTerms": "Computes a weighted sum of multiple sub-scores (favorites, retweets, follows, mentions) into a single composite affinity metric.",
+    "whyThisExists": "To combine diverse behavioral signals into an actionable single-scalar ranking feature with configurable business weights.",
+    "howItAffectsYourReach": "Multiplies your interactions by platform importance weights; retweets and replies carry heavier weights than passive views.",
+    "theGoldenRule": "Focus on driving active conversation (replies and retweets) as they contribute substantially higher weights to composite scores."
+  },
+  {
+    "path": "simclusters/simclusters_v2/stores/LanguageFilteredLocaleEntityEmbeddingStore.scala",
+    "inSimpleTerms": "Wraps entity embedding stores with language and locale filters, ensuring recommendations match the viewer's spoken language.",
+    "whyThisExists": "To prevent cross-language mismatch in recommendations by filtering out embeddings that do not align with user locale preferences.",
+    "howItAffectsYourReach": "Restricts distribution of localized content to users who share that language/locale, preventing distribution drops from language barriers.",
+    "theGoldenRule": "Maintain consistent language usage and clear locale metadata so the algorithm routes your posts to native speakers."
+  },
+  {
+    "path": "simclusters/simclusters_v2/stores/MultiTypeGraphStore.scala",
+    "inSimpleTerms": "Provides storage access to heterogeneous multi-type graphs linking users, tweets, topics, and entities with typed interaction edges.",
+    "whyThisExists": "To enable graph traversal and embedding lookups across diverse platform entity types in a unified store.",
+    "howItAffectsYourReach": "Enables multi-hop discovery: a user following a topic can discover your tweet if it is linked to that topic in the multi-type graph.",
+    "theGoldenRule": "Tag and contextualize posts with clear semantic concepts so multi-type graphs link your content to popular topics."
+  },
+  {
+    "path": "simclusters/simclusters_v2/stores/SimClustersEmbeddingStore.scala",
+    "inSimpleTerms": "Provides low-latency read access to sparse SimClusters embeddings stored in Manhattan key-value datasets, with Decider gating.",
+    "whyThisExists": "To serve production embedding queries to recommendation pipelines with high availability and fast failover.",
+    "howItAffectsYourReach": "Supplies your tweet and author embeddings to candidate retrieval services across the entire platform.",
+    "theGoldenRule": "Consistent thematic identity ensures your embedding stored in Manhattan remains strong and accurate."
+  },
+  {
+    "path": "simclusters/simclusters_v2/stores/SimClustersMultiEmbeddingStore.scala",
+    "inSimpleTerms": "Retrieves multi-embedding objects containing multiple temporal slices and decay windows for an entity.",
+    "whyThisExists": "To allow scoring algorithms to evaluate short-term real-time engagement alongside long-term topic affinity.",
+    "howItAffectsYourReach": "Allows fresh, fast-moving posts to match short-term engagement vectors while evergreen posts match long-term interest vectors.",
+    "theGoldenRule": "Balance immediate breaking-news posts with durable evergreen content to maximize hits across both short and long temporal windows."
+  },
+  {
+    "path": "simclusters/simclusters_v2/stores/TopicTopProducersStore.scala",
+    "inSimpleTerms": "Reads the list of top-ranked producer accounts for specific semantic topics and clusters.",
+    "whyThisExists": "To power 'Who to Follow' recommendations and seed topic candidate generation with trusted domain creators.",
+    "howItAffectsYourReach": "Qualifying as a top producer for a topic makes your account the primary recommended candidate for users following that topic.",
+    "theGoldenRule": "Publish consistently in a defined subject area to enter the top producer registry for your topic."
+  },
+  {
+    "path": "simclusters/simclusters_v2/stores/WtfMbcgStore.scala",
+    "inSimpleTerms": "Stores and serves graph-based recommendations generated from Model-Based Collaborative Filtering graphs for Who-To-Follow.",
+    "whyThisExists": "To provide high-quality account follow recommendations based on graph collaborative filtering.",
+    "howItAffectsYourReach": "Drives profile follow recommendations; appearing in this store increases organic follower acquisition from targeted audiences.",
+    "theGoldenRule": "Cultivate strong mutual follow and engagement connections with authoritative creators in your space."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/ClientConfigs.scala",
+    "inSimpleTerms": "Defines client connection settings, timeouts, and buffer sizes for Summingbird streaming jobs reading from Kafka and writing to Manhattan.",
+    "whyThisExists": "To standardize client configurations across distributed streaming topologies running in Storm/Heron.",
+    "howItAffectsYourReach": "Ensures uninterrupted real-time streaming updates of user engagement signals into online stores.",
+    "theGoldenRule": "Internal streaming client configuration."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/Configs.scala",
+    "inSimpleTerms": "Provides general configuration parameters and feature switches for Summingbird real-time embedding aggregation jobs.",
+    "whyThisExists": "To manage batching intervals, buffer capacities, and model versions for stream processing topologies.",
+    "howItAffectsYourReach": "Controls the granularity and speed with which live user engagements update online recommendation vectors.",
+    "theGoldenRule": "Internal stream processing settings."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/EntityUtil.scala",
+    "inSimpleTerms": "Provides utility functions to parse, validate, and extract entity IDs and topic tags from raw streaming tweet events.",
+    "whyThisExists": "To extract semantic entities from real-time event streams before cluster mapping.",
+    "howItAffectsYourReach": "Ensures semantic entities mentioned in your tweets are recognized and mapped to topic clusters in real time.",
+    "theGoldenRule": "Include clear keywords and subject references so entity extractors accurately identify your post's topic."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/Implicits.scala",
+    "inSimpleTerms": "Defines Scala implicit conversions, serializers, and Monoids required for Summingbird stream operations.",
+    "whyThisExists": "To provide concise, type-safe streaming transformations and state aggregation in Scala.",
+    "howItAffectsYourReach": "Powers the underlying mathematical aggregation of streaming user engagement events.",
+    "theGoldenRule": "Internal Scala type machinery."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/ModelVersionProfile.scala",
+    "inSimpleTerms": "Encapsulates configuration profiles for specific SimClusters model versions running inside streaming topologies.",
+    "whyThisExists": "To allow Summingbird jobs to dynamically adapt to different cluster model versions without code changes.",
+    "howItAffectsYourReach": "Ensures real-time streaming updates target the active production cluster space.",
+    "theGoldenRule": "Internal model profiling."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/Monoids.scala",
+    "inSimpleTerms": "Defines custom Algebird Monoids for combining decayed values, bounded priority queues, and sparse embedding maps.",
+    "whyThisExists": "To support associative, parallel state aggregation in high-throughput distributed stream processors.",
+    "howItAffectsYourReach": "Ensures every like, retweet, and reply mathematically updates candidate scores in real time without lost updates.",
+    "theGoldenRule": "Consistent stream of engagements reliably compounds your score via monoid additions."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/SimClustersEmbeddingWithMetadataMonoid.scala",
+    "inSimpleTerms": "Combines sparse SimClusters embeddings while tracking metadata such as update timestamps and source counts.",
+    "whyThisExists": "To maintain vector freshness metadata alongside raw cluster weights during streaming aggregation.",
+    "howItAffectsYourReach": "Freshness metadata prevents stale engagement signals from skewing active real-time embeddings.",
+    "theGoldenRule": "Keep generating fresh interactions to keep your embedding timestamp current and highly weighted."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/SimClustersHashUtil.scala",
+    "inSimpleTerms": "Provides consistent hashing utilities for partitioning stream keys across distributed Storm/Heron worker bolts.",
+    "whyThisExists": "To ensure uniform workload distribution and prevent hot-key worker node bottlenecks during viral traffic spikes.",
+    "howItAffectsYourReach": "Prevents stream processing lag during massive viral spikes, ensuring your real-time engagement is recorded without delay.",
+    "theGoldenRule": "Internal stream load-balancing utility."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/SimClustersInterestedInUtil.scala",
+    "inSimpleTerms": "Calculates a user's real-time 'InterestedIn' cluster embeddings by aggregating their recent likes, retweets, and follows.",
+    "whyThisExists": "To continuously update user interest vectors based on their immediate on-platform behavior.",
+    "howItAffectsYourReach": "When users interact with your content, their interest vectors shift toward your clusters, bringing them more of your future posts.",
+    "theGoldenRule": "Deliver high-value content that prompts users to engage, immediately aligning their real-time interest vector with your profile."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/SimClustersProfile.scala",
+    "inSimpleTerms": "Defines profile metadata schemas for users and clusters, encapsulating engagement thresholds and half-life decay rates.",
+    "whyThisExists": "To standardize decay parameters and thresholding across real-time streaming jobs.",
+    "howItAffectsYourReach": "Governs how quickly past engagement decays over time, prioritizing recent interactions over older activity.",
+    "theGoldenRule": "Post regularly to replenish decaying engagement scores and maintain high cluster authority."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/StatsUtil.scala",
+    "inSimpleTerms": "Provides metrics instrumentation helpers for tracking throughput, emit rates, and dropped messages in streaming topologies.",
+    "whyThisExists": "To monitor health and processing latency across Storm/Heron streaming clusters.",
+    "howItAffectsYourReach": "Ensures streaming jobs operate within SLAs so user interest updates are reflected in feeds within seconds.",
+    "theGoldenRule": "Internal telemetry instrumentation."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/SummerWithSumValues.scala",
+    "inSimpleTerms": "Implements an in-memory aggregation buffer (Summer) that batches key-value updates before flushing to persistent storage.",
+    "whyThisExists": "To reduce write IOPS on Manhattan databases by combining multiple rapid updates for the same key in memory.",
+    "howItAffectsYourReach": "Ensures viral tweets generating thousands of likes per second don't overload database backends.",
+    "theGoldenRule": "Internal stream buffering utility."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/ThriftDecayedValueMonoid.scala",
+    "inSimpleTerms": "Implements mathematical half-life exponential time decay for Thrift-serialized numeric values in event streams.",
+    "whyThisExists": "To automatically devalue older engagements according to precise half-life formulas during stream summation.",
+    "howItAffectsYourReach": "Older likes lose half their weight after each half-life interval, meaning recent engagement velocity dominates ranking.",
+    "theGoldenRule": "Drive immediate, high-velocity engagement within the first 60 minutes of posting to beat exponential decay curves."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/common/TweetEntityExtractor.scala",
+    "inSimpleTerms": "Extracts semantic entities, hashtags, and media URLs from raw streaming tweets to map them into SimClusters dimensions.",
+    "whyThisExists": "To rapidly categorize newly published tweets into topic clusters as soon as they are posted.",
+    "howItAffectsYourReach": "Enables instant indexing of your tweet into relevant topic clusters within seconds of publication.",
+    "theGoldenRule": "Use unambiguous language and relevant hashtags so real-time extractors immediately classify your post into the proper clusters."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/AdsTwhinTweetEmbeddingStore.scala",
+    "inSimpleTerms": "Provides readable store access to TwHIN dense tweet embeddings optimized for ad targeting and commercial relevance.",
+    "whyThisExists": "To serve high-dimensional neural tweet embeddings for promoted post recommendation and monetization ranking.",
+    "howItAffectsYourReach": "Powers commercial and sponsored post placement matching based on deep graph embeddings.",
+    "theGoldenRule": "Maintain strong engagement quality to match high-value commercial and sponsored promotion vectors."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/AdsTwhinUserEmbeddingStore.scala",
+    "inSimpleTerms": "Provides readable store access to user TwHIN embeddings for ads ranking and promoted tweet candidate matching.",
+    "whyThisExists": "To retrieve user commercial interest profiles generated by TwHIN multi-task graph neural networks.",
+    "howItAffectsYourReach": "Matches commercial tweet impressions to high-affinity user segments.",
+    "theGoldenRule": "Internal advertising embedding store."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/ApeTopicEmbeddingStore.scala",
+    "inSimpleTerms": "Stores and serves topic embeddings generated from Audience Platform Engine (APE) cluster representations.",
+    "whyThisExists": "To provide specialized audience topic vectors for platform-wide recommendation engines.",
+    "howItAffectsYourReach": "Matches audience cluster preferences to topical candidate tweets.",
+    "theGoldenRule": "Internal audience platform topic store."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/ClusterDetailsReadableStore.scala",
+    "inSimpleTerms": "Provides readable store access to cluster metadata, including representative user lists, cluster labels, and member sizes.",
+    "whyThisExists": "To fetch cluster context during real-time recommendation scoring and debugging.",
+    "howItAffectsYourReach": "Provides the descriptive data that helps ranking systems understand the identity of the cluster where your tweet is ranked.",
+    "theGoldenRule": "Align with established, labeled clusters to benefit from clear categorization."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/EntityClusterScoreReadableStore.scala",
+    "inSimpleTerms": "Reads affinity scores between Semantic Core entities and SimClusters dimensions from persistent storage.",
+    "whyThisExists": "To link platform-recognized entities (celebrities, events, brands) to behavioral user clusters.",
+    "howItAffectsYourReach": "Posts mentioning recognized entities inherit those entities' cluster affinities, expanding distribution to all users interested in those clusters.",
+    "theGoldenRule": "Reference recognized entities, trends, and subjects to tap into existing high-affinity cluster distribution channels."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/GizmoduckUserStore.scala",
+    "inSimpleTerms": "Provides a readable store wrapper around Gizmoduck user service to fetch account status, safety flags, and user metadata.",
+    "whyThisExists": "To verify author account standing and safety properties during real-time stream processing.",
+    "howItAffectsYourReach": "Accounts with active safety flags or restricted status are filtered out before real-time embedding updates occur.",
+    "theGoldenRule": "Keep your account in good standing with zero safety violations to ensure continuous inclusion in recommendation stores."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/ManhattanFromStratoStore.scala",
+    "inSimpleTerms": "Fetches Manhattan key-value datasets via Strato federated catalog interfaces.",
+    "whyThisExists": "To provide a standardized access path to Manhattan storage across diverse streaming environments.",
+    "howItAffectsYourReach": "Facilitates seamless retrieval of author and tweet cluster vectors across distributed clusters.",
+    "theGoldenRule": "Internal storage access layer."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/PersistentTweetEmbeddingStore.scala",
+    "inSimpleTerms": "Reads and writes long-term persistent SimClusters embeddings for tweets to Manhattan datasets.",
+    "whyThisExists": "To ensure historical tweet embeddings remain available for evergreen recommendation and search retrieval.",
+    "howItAffectsYourReach": "Allows evergreen high-performing tweets to continue receiving recommendations weeks or months after publication.",
+    "theGoldenRule": "Create high-utility, timeless content; persistent embedding stores allow evergreen tweets to receive long-tail distribution."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/ProducerClusterEmbeddingReadableStores.scala",
+    "inSimpleTerms": "Provides read-only access to producer (author) cluster embeddings, capturing what topical domains each creator is known for.",
+    "whyThisExists": "To supply author topical authority profiles to candidate generators and ranking scorers.",
+    "howItAffectsYourReach": "Posts authored by creators with high KnownFor weights in a cluster receive natural ranking boosts for users following that cluster.",
+    "theGoldenRule": "Build deep topical consistency; high author KnownFor scores give every new tweet you post an automatic initial ranking advantage."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/SemanticCoreEntityEmbeddingStore.scala",
+    "inSimpleTerms": "Provides access to SimClusters embeddings for SemanticCore entity IDs.",
+    "whyThisExists": "To allow topic-based and entity-based recommendation systems to query cluster representations directly.",
+    "howItAffectsYourReach": "Enables tweets tagged with SemanticCore entities to match user cluster preferences.",
+    "theGoldenRule": "Create content around clear topics recognized by SemanticCore to maximize entity-based reach."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/SimClustersManhattanReadableStoreForReadWriteDataset.scala",
+    "inSimpleTerms": "Provides a readable store implementation over Manhattan read-write datasets with retry logic and error metrics.",
+    "whyThisExists": "To enable safe, low-latency reads from real-time streaming update datasets.",
+    "howItAffectsYourReach": "Ensures streaming updates to your tweet embeddings are immediately queryable by online rankers.",
+    "theGoldenRule": "Internal Manhattan read-write storage wrapper."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TfgTopicEmbeddingsStore.scala",
+    "inSimpleTerms": "Stores and serves Topic Follow Graph (TFG) based topic embeddings.",
+    "whyThisExists": "To represent topics in the SimClusters space using explicit user topic follow graphs.",
+    "howItAffectsYourReach": "Matches your tweets to users who follow topics related to your content.",
+    "theGoldenRule": "Engage with specific topics that have large, dedicated topic-follow user bases."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TopKClustersForEntityReadableStore.scala",
+    "inSimpleTerms": "Retrieves the top-K highest-affinity cluster IDs for any given entity (user, tweet, or topic).",
+    "whyThisExists": "To perform fast truncated lookup of an entity's primary clusters without loading thousands of minor dimensions.",
+    "howItAffectsYourReach": "Restricts candidate routing to your top-K primary clusters, focusing distribution on your strongest audience segments.",
+    "theGoldenRule": "Concentrate your engagement in a few core clusters so your top-K vector is sharp and unambiguous."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TopKClustersForTweetReadableStore.scala",
+    "inSimpleTerms": "Provides low-latency access to the top-K cluster dimensions assigned to a specific tweet.",
+    "whyThisExists": "To quickly determine which topic clusters a candidate tweet belongs to during real-time feed assembly.",
+    "howItAffectsYourReach": "Only clusters appearing in your tweet's top-K list are used for candidate matching in out-of-network feeds.",
+    "theGoldenRule": "Ensure your tweet clearly targets a specific subject so it ranks in the top-K cluster dimensions for that topic."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TopKHydratedTweetsForClusterReadableStore.scala",
+    "inSimpleTerms": "Fetches fully hydrated candidate tweet objects (including text, author, and engagement counts) for a given cluster.",
+    "whyThisExists": "To eliminate separate downstream tweet hydration calls by pre-hydrating top cluster candidates in cache.",
+    "howItAffectsYourReach": "Being in this pre-hydrated cache ensures instantaneous candidate delivery to timelines without hydration lag.",
+    "theGoldenRule": "Top-tier engagement places your tweet into this ultra-fast pre-hydrated cache."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TopKTweetsForClusterReadableStore.scala",
+    "inSimpleTerms": "Retrieves the top-K highest-scoring tweet IDs belonging to a specific cluster ID.",
+    "whyThisExists": "To serve as the core reverse-index for out-of-network candidate retrieval.",
+    "howItAffectsYourReach": "Securing a spot in a cluster's Top-K list is the single most powerful driver of out-of-network viral distribution.",
+    "theGoldenRule": "Compete for top engagement velocity in your primary cluster; top-K cluster status distributes your tweet to all cluster followers."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TweetMetadataStore.scala",
+    "inSimpleTerms": "Stores and retrieves lightweight metadata (creation time, author ID, language, media flags) for candidate tweets.",
+    "whyThisExists": "To provide fast access to essential tweet attributes needed for filtering and scoring.",
+    "howItAffectsYourReach": "Supplies language and media flags that determine candidate eligibility in specialized feed surfaces.",
+    "theGoldenRule": "Attach complete media and language tags to ensure proper metadata storage."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TweetSquaredL2NormWritableStore.scala",
+    "inSimpleTerms": "Writes precomputed squared L2 norms for tweet embeddings to persistent storage.",
+    "whyThisExists": "To cache vector lengths so real-time cosine similarity dot products only require numerator multiplication.",
+    "howItAffectsYourReach": "Enables ultra-fast cosine similarity evaluation across candidate pools.",
+    "theGoldenRule": "Internal mathematical acceleration store."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TweetStatusCountsStore.scala",
+    "inSimpleTerms": "Maintains real-time counts of tweet status events (retweets, replies, favorites, quote tweets).",
+    "whyThisExists": "To supply fresh engagement count features to ranking models in real time.",
+    "howItAffectsYourReach": "Surges in real-time counts directly feed heavy ranker models with positive interaction velocity signals.",
+    "theGoldenRule": "Encourage immediate discussion and sharing to ramp up status count features rapidly."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TweetStatusCountsTesStore.scala",
+    "inSimpleTerms": "Integrates Tweet Event Stream (TES) status counts with Summingbird streaming storage tiers.",
+    "whyThisExists": "To bridge real-time tweet engagement telemetry directly into streaming recommendation pipelines.",
+    "howItAffectsYourReach": "Ensures real-time engagement spikes are reflected in candidate scoring without delay.",
+    "theGoldenRule": "Capitalize on breaking news or live events to generate rapid TES engagement bursts."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TwhinTweetEmbeddingStore.scala",
+    "inSimpleTerms": "Provides readable store access to TwHIN dense neural tweet embeddings across production clusters.",
+    "whyThisExists": "To serve deep neural embeddings trained on heterogeneous graph interactions for candidate scoring.",
+    "howItAffectsYourReach": "TwHIN embeddings capture deep semantic context, allowing your post to match users based on nuanced graph similarity.",
+    "theGoldenRule": "Write articulate, high-context posts that produce rich, high-confidence TwHIN neural embeddings."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/TwhinUserEmbeddingStore.scala",
+    "inSimpleTerms": "Provides readable store access to TwHIN user embeddings capturing broad user interests and social graph positions.",
+    "whyThisExists": "To serve user representation vectors for neural similarity scoring and personalized candidate ranking.",
+    "howItAffectsYourReach": "Matches your tweets to users whose TwHIN graph position aligns with your content's neural vector.",
+    "theGoldenRule": "Build authentic connections with active accounts to establish a strong TwHIN user embedding."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/UserInterestedInReadableStore.scala",
+    "inSimpleTerms": "Reads a user's 'InterestedIn' SimClusters embedding vector from persistent Manhattan storage.",
+    "whyThisExists": "To retrieve the viewer's topic interest profile during timeline candidate generation.",
+    "howItAffectsYourReach": "Your tweet's clusters are directly compared against the viewer's InterestedIn vector to decide candidate inclusion.",
+    "theGoldenRule": "Align with clear, well-defined audience interest clusters to maximize matches with active user interest vectors."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/stores/UserKnownForReadableStore.scala",
+    "inSimpleTerms": "Reads an author's 'KnownFor' SimClusters embedding vector, capturing their established domain authority.",
+    "whyThisExists": "To provide author-level topical authority weights to ranking models.",
+    "howItAffectsYourReach": "Having strong KnownFor scores in a cluster gives all your future posts in that topic an automatic initial score boost.",
+    "theGoldenRule": "Avoid posting randomly on dozens of unrelated topics; deepening your KnownFor authority in 1-2 core niches maximizes long-term reach."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/AdsTwhinRebuildTweetJob.scala",
+    "inSimpleTerms": "Defines the Storm streaming topology for rebuilding and backfilling TwHIN tweet embeddings for commercial ad systems.",
+    "whyThisExists": "To synchronize advertising neural embeddings when model updates or schema migrations occur.",
+    "howItAffectsYourReach": "Ensures commercial tweet candidates have up-to-date embeddings for monetization ranking.",
+    "theGoldenRule": "Internal streaming backfill job."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/AdsTwhinRebuildTweetJobRunner.scala",
+    "inSimpleTerms": "Executes and monitors the Ads TwHIN tweet embedding rebuild topology on Heron/Storm clusters.",
+    "whyThisExists": "To deploy and operate commercial streaming rebuild topologies in production.",
+    "howItAffectsYourReach": "Maintains data pipeline freshness for commercial candidate scoring.",
+    "theGoldenRule": "Internal topology runner."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/AdsTwhinRebuildUserJob.scala",
+    "inSimpleTerms": "Defines the Storm streaming topology for rebuilding user TwHIN embeddings for advertising systems.",
+    "whyThisExists": "To backfill user commercial graph representations after model retraining.",
+    "howItAffectsYourReach": "Updates user ad targeting profiles across the platform.",
+    "theGoldenRule": "Internal advertising topology."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/AdsTwhinRebuildUserJobRunner.scala",
+    "inSimpleTerms": "Manages execution, worker scaling, and telemetry for the Ads TwHIN user rebuild streaming job.",
+    "whyThisExists": "To operate large-scale streaming rebuild jobs reliably on distributed infrastructure.",
+    "howItAffectsYourReach": "Operates the streaming runner that backfills user TwHIN embeddings for commercial recommendation systems.",
+    "theGoldenRule": "Maintain authentic commercial engagement patterns to ensure accurate representation in user ad interest profiles."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/PersistentTweetJob.scala",
+    "inSimpleTerms": "Streams live tweet events and writes persistent, long-term SimClusters embeddings to durable storage.",
+    "whyThisExists": "To ensure every published tweet has a durable cluster embedding stored for future recommendation passes.",
+    "howItAffectsYourReach": "Guarantees your tweet is permanently indexed in the SimClusters semantic space.",
+    "theGoldenRule": "Every tweet you publish is processed by this job; consistent topical relevance ensures long-term indexing accuracy."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/PersistentTweetJobRunner.scala",
+    "inSimpleTerms": "Boots and manages the persistent tweet embedding streaming topology on Heron clusters.",
+    "whyThisExists": "To maintain 24/7 streaming ingestion of tweet creation events into long-term embedding stores.",
+    "howItAffectsYourReach": "Ensures uninterrupted real-time embedding generation for all new posts.",
+    "theGoldenRule": "Internal streaming lifecycle runner."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TweetJob.scala",
+    "inSimpleTerms": "Processes real-time engagement streams (likes, retweets, replies) and dynamically updates real-time tweet cluster scores.",
+    "whyThisExists": "To maintain real-time cluster scores for newly trending tweets as engagements pour in.",
+    "howItAffectsYourReach": "As users engage with your tweet, this job updates its cluster scores in real time, pushing it into the cluster's Top-K list.",
+    "theGoldenRule": "Drive early engagement velocity to trigger rapid real-time cluster score updates."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TweetJobRunner.scala",
+    "inSimpleTerms": "Runs and monitors the real-time TweetJob streaming topology in production.",
+    "whyThisExists": "To operate real-time tweet score aggregation infrastructure with automatic failure recovery.",
+    "howItAffectsYourReach": "Guarantees live engagement signals immediately impact recommendation algorithms.",
+    "theGoldenRule": "Internal streaming operational harness."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TwhinRebuildTweetJob.scala",
+    "inSimpleTerms": "Defines the streaming topology for rebuilding general TwHIN neural embeddings for tweets across the platform.",
+    "whyThisExists": "To refresh neural tweet embeddings when new graph model checkpoints are deployed.",
+    "howItAffectsYourReach": "Updates the neural graph embeddings used to calculate tweet semantic similarity.",
+    "theGoldenRule": "Internal neural embedding backfill topology."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TwhinRebuildTweetJobRunner.scala",
+    "inSimpleTerms": "Executes and monitors the TwHIN tweet rebuild streaming job on distributed Heron topologies.",
+    "whyThisExists": "To maintain operational stability during platform-wide neural embedding updates.",
+    "howItAffectsYourReach": "Executes the streaming backfill runner for platform-wide TwHIN tweet neural embeddings.",
+    "theGoldenRule": "Publish evergreen, well-structured content that retains high neural embedding quality across graph model rebuilds."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TwhinRebuildUserJob.scala",
+    "inSimpleTerms": "Streams and updates user TwHIN neural embeddings following graph neural network retraining.",
+    "whyThisExists": "To update hundreds of millions of user graph representation vectors in real time.",
+    "howItAffectsYourReach": "Refreshes the user-level neural vectors that match viewers with creator content.",
+    "theGoldenRule": "Internal user embedding backfill pipeline."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TwhinRebuildUserJobRunner.scala",
+    "inSimpleTerms": "Launches and supervises the user TwHIN rebuild topology on distributed clusters.",
+    "whyThisExists": "To provide fault-tolerant execution for user embedding refresh jobs.",
+    "howItAffectsYourReach": "Supervises the distributed execution of user TwHIN neural embedding updates.",
+    "theGoldenRule": "Build lasting relationships with active followers so user graph rebuilds preserve strong affinity links to your profile."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TwhinTweetJob.scala",
+    "inSimpleTerms": "Consumes live tweet events and generates streaming TwHIN neural embeddings in real time.",
+    "whyThisExists": "To compute dense neural graph representations for new tweets within milliseconds of publication.",
+    "howItAffectsYourReach": "Enables deep neural matching models to score your tweet immediately upon creation.",
+    "theGoldenRule": "Produce high-signal content to generate high-confidence TwHIN graph vectors."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TwhinTweetJobRunner.scala",
+    "inSimpleTerms": "Bootstraps and configures the streaming TwHIN tweet embedding job runner.",
+    "whyThisExists": "To manage production deployment and telemetry for live neural tweet embedding generation.",
+    "howItAffectsYourReach": "Ensures real-time neural embedding generation remains active 24/7.",
+    "theGoldenRule": "Internal streaming runner."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TwhinUserJob.scala",
+    "inSimpleTerms": "Processes live user interaction streams and continuously updates user TwHIN graph representations.",
+    "whyThisExists": "To keep user neural interest profiles continuously synchronized with their recent reading habits.",
+    "howItAffectsYourReach": "When readers interact with your posts, their TwHIN user embedding shifts closer to your content vector.",
+    "theGoldenRule": "Engaging content shifts viewer neural profiles toward your profile, increasing long-term audience retention."
+  },
+  {
+    "path": "simclusters/simclusters_v2/summingbird/storm/TwhinUserJobRunner.scala",
+    "inSimpleTerms": "Operates and scales the streaming TwHIN user representation update job.",
+    "whyThisExists": "To ensure reliable, low-latency execution of user neural profile streaming updates.",
+    "howItAffectsYourReach": "Manages production streaming runners that update user neural interest representations in real time.",
+    "theGoldenRule": "Consistently deliver high-quality posts to prompt regular follower interactions, continuously updating their real-time TwHIN vectors."
+  },
+  {
+    "path": "simclusters/simclusters_v2/tweet_similarity/ModelBasedTweetSimilaritySimClustersEmbeddingAdapter.scala",
+    "inSimpleTerms": "Adapts SimClusters embedding pairs into ML feature records for training and evaluating tweet-to-tweet similarity models.",
+    "whyThisExists": "To provide rich cluster similarity features to machine learning models that predict semantic relatedness between posts.",
+    "howItAffectsYourReach": "Influences 'Similar Tweets' and 'More Like This' recommendation modules, surfacing your tweet under related viral posts.",
+    "theGoldenRule": "Craft tweets with clear contextual relevance to high-traffic discussions to be recommended as similar content."
+  },
+  {
+    "path": "simclusters/simclusters_v2/tweet_similarity/TweetSimilarityFeatures.scala",
+    "inSimpleTerms": "Defines continuous, discrete, and sparse ML feature definitions for evaluating tweet similarity, including cosine distances and dot products.",
+    "whyThisExists": "To establish the feature schema used by offline training pipelines and online inference services for tweet similarity.",
+    "howItAffectsYourReach": "Supplies the mathematical features used to cluster related tweets and deduplicate content across the feed.",
+    "theGoldenRule": "Provide unique angles and fresh vocabulary on popular topics to avoid being clustered and pruned out by diversity deduplication."
+  },
+  {
+    "path": "simclusters/simclustersann/SimclustersAnnServer.scala",
+    "inSimpleTerms": "Bootstraps the SimClusters Approximate Nearest Neighbor (ANN) Finatra Thrift server, binding controllers, caching modules, rate limiters, and mTLS filters.",
+    "whyThisExists": "To run the production Thrift service responsible for high-throughput semantic vector retrieval of out-of-network tweet candidates.",
+    "howItAffectsYourReach": "Controls the operational entry point that queries billions of user-cluster and tweet-cluster affinity pairs to populate For You feeds.",
+    "theGoldenRule": "High cluster-specific affinity ensures your tweets are pulled by ANN servers when users interested in your topics request their timelines."
+  },
+  {
+    "path": "simclusters/simclustersann/SimclustersAnnWarmupHandler.scala",
+    "inSimpleTerms": "Executes warmup queries during server initialization to prime JIT compilers, populate in-memory cluster caches, and establish connection pools before receiving live traffic.",
+    "whyThisExists": "To eliminate JVM cold-start latency spikes that could cause query timeouts during deployment rollouts.",
+    "howItAffectsYourReach": "Ensures consistent low-latency retrieval performance, preventing candidate dropouts during server restarts.",
+    "theGoldenRule": "Operational infrastructure ensuring 100% feed retrieval reliability."
+  },
+  {
+    "path": "simclusters/simclustersann/candidate_source/ApproximateCosineSimilarity.scala",
+    "inSimpleTerms": "Calculates approximate cosine similarity between a user's cluster interest embedding and tweet cluster embeddings using sparse dot products.",
+    "whyThisExists": "To evaluate semantic topic match scores across thousands of candidate tweets within strict sub-millisecond per-batch latency constraints.",
+    "howItAffectsYourReach": "The calculated cosine similarity score directly determines whether an out-of-network tweet ranks high enough in topic similarity to be forwarded to the heavy ranker.",
+    "theGoldenRule": "Maintain strong topical focus; focused tweets score higher cosine similarity with specific cluster embeddings than generic, multi-topic tweets."
+  },
+  {
+    "path": "simclusters/simclustersann/candidate_source/ExperimentalApproximateCosineSimilarity.scala",
+    "inSimpleTerms": "Tests experimental mathematical variations of cosine similarity calculation, incorporating threshold gating and non-linear score decay.",
+    "whyThisExists": "To benchmark novel similarity formulations that improve candidate retrieval precision without regressing server latency.",
+    "howItAffectsYourReach": "Determines qualification thresholds in experimental cluster retrieval cohorts, testing sharper relevance cutoffs.",
+    "theGoldenRule": "Concentrate high-value topical keywords and community engagements to clear stricter experimental similarity thresholds."
+  },
+  {
+    "path": "simclusters/simclustersann/candidate_source/OptimizedApproximateCosineSimilarity.scala",
+    "inSimpleTerms": "Implements an optimized, memory-efficient sparse cosine similarity algorithm with pre-allocated arrays and early pruning.",
+    "whyThisExists": "To reduce GC pressure and CPU cycles when calculating millions of dot products per second across high-dimensional cluster spaces.",
+    "howItAffectsYourReach": "Allows deeper candidate retrieval pools to be evaluated per request, increasing the likelihood that niche creator tweets are discovered.",
+    "theGoldenRule": "Consistent topic engagement builds strong weights across multiple sub-clusters, expanding discovery across wider evaluation pools."
+  },
+  {
+    "path": "simclusters/simclustersann/candidate_source/SimClustersANNCandidateSource.scala",
+    "inSimpleTerms": "Performs approximate nearest-neighbor search over multi-billion vector index spaces to retrieve relevant tweet candidates based on user cluster preferences. It pairs user interest vectors with cluster top tweets.",
+    "whyThisExists": "To retrieve hundreds of topically relevant out-of-network tweet candidates in milliseconds for every timeline request.",
+    "howItAffectsYourReach": "If your tweet achieves top-K rank within a SimCluster, it gets fetched as a candidate for millions of users subscribed to that interest cluster.",
+    "theGoldenRule": "Focus on owning a specific niche so your content ranks at the top of designated SimClusters topic vectors."
+  },
+  {
+    "path": "simclusters/simclustersann/common/FlagNames.scala",
+    "inSimpleTerms": "Defines configuration flag constants for SimClusters ANN, such as service timeouts, cache TTLs, and dark traffic decider keys.",
+    "whyThisExists": "To centralize command-line and dynamic flag identifiers across the SimClusters ANN service modules.",
+    "howItAffectsYourReach": "Governs timeout ceilings and dark traffic validation that ensure stable vector retrieval.",
+    "theGoldenRule": "Internal configuration constants with no direct reach implication."
+  },
+  {
+    "path": "simclusters/simclustersann/controllers/GetTweetCandidatesGrpcController.scala",
+    "inSimpleTerms": "Exposes the gRPC endpoint for candidate tweet retrieval, converting protobuf queries into internal SimClusters ANN lookup operations and streaming back candidate lists.",
+    "whyThisExists": "To bridge modern gRPC-based feed pipelines (like Home Mixer) with the SimClusters ANN candidate generation engine.",
+    "howItAffectsYourReach": "Serves as the high-speed transit gateway delivering out-of-network candidate tweets into Home Mixer ranking pipelines.",
+    "theGoldenRule": "Ensure your content is top-ranked in its topic clusters so it is returned across every gRPC candidate batch."
+  },
+  {
+    "path": "simclusters/simclustersann/controllers/SimClustersANNController.scala",
+    "inSimpleTerms": "Handles incoming Thrift RPC requests for SimClusters ANN candidate generation, orchestrating embedding lookups, cluster indexing, and similarity ranking.",
+    "whyThisExists": "To serve as the primary legacy Thrift controller interface for recommendation services querying vector candidate sets.",
+    "howItAffectsYourReach": "Directly processes candidate generation requests that populate out-of-network tweets in user timelines and notifications.",
+    "theGoldenRule": "Strong cluster-level engagement guarantees inclusion when this controller fetches candidates for active topic followers."
+  },
+  {
+    "path": "simclusters/simclustersann/exceptions/InvalidRequestForSimClustersAnnVariantException.scala",
+    "inSimpleTerms": "Defines custom exceptions thrown when incoming ANN requests specify invalid model versions, unsupported embedding types, or malformed parameters.",
+    "whyThisExists": "To fail fast and provide explicit error semantics when callers pass incompatible model configurations.",
+    "howItAffectsYourReach": "Prevents corrupted or incompatible queries from executing, safeguarding system availability.",
+    "theGoldenRule": "Internal error handling structure."
+  },
+  {
+    "path": "simclusters/simclustersann/exceptions/InvalidRequestForSimClustersAnnVariantExceptionMapper.scala",
+    "inSimpleTerms": "Maps InvalidRequestForSimClustersAnnVariantException instances into standardized Finatra Thrift client error responses.",
+    "whyThisExists": "To return structured, informative error responses to client services when invalid queries are encountered.",
+    "howItAffectsYourReach": "Maintains graceful degradation and logging when upstream callers issue malformed requests.",
+    "theGoldenRule": "Internal exception translation logic."
+  },
+  {
+    "path": "simclusters/simclustersann/exceptions/MissingClusterConfigForSimClustersAnnVariantException.scala",
+    "inSimpleTerms": "Defines an exception thrown when requested SimCluster variant configurations cannot be found in the active cluster registry.",
+    "whyThisExists": "To protect against misconfigured model deployments where cluster dimensions or parameters are missing.",
+    "howItAffectsYourReach": "Ensures requests fail safely rather than executing undefined mathematical operations on missing cluster configurations.",
+    "theGoldenRule": "Internal configuration safety guard."
+  },
+  {
+    "path": "simclusters/simclustersann/filters/GetTweetCandidatesResponseStatsFilter.scala",
+    "inSimpleTerms": "Intercepts gRPC candidate responses to record metrics on candidate batch sizes, empty response counts, and latency distributions.",
+    "whyThisExists": "To provide operational visibility into candidate yield across various SimCluster models and user cohorts.",
+    "howItAffectsYourReach": "Monitors whether cluster queries successfully return rich candidate sets or return empty batches.",
+    "theGoldenRule": "Consistently active topic clusters maintain high candidate return rates, ensuring continuous feed impressions."
+  },
+  {
+    "path": "simclusters/simclustersann/filters/SimClustersAnnVariantFilter.scala",
+    "inSimpleTerms": "Validates that incoming client requests are authorized and that requested model variants exist before dispatching to controllers.",
+    "whyThisExists": "To enforce mTLS client authentication and request routing validation at the transport layer.",
+    "howItAffectsYourReach": "Protects candidate generation capacity by rejecting unauthorized or invalid requests at the network edge.",
+    "theGoldenRule": "Internal security and routing filter."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/CacheModule.scala",
+    "inSimpleTerms": "Provides Google Guice dependency injection bindings for Memcached clients used to cache SimClusters embeddings and cluster indices.",
+    "whyThisExists": "To enable high-speed distributed in-memory caching that minimizes expensive remote database lookups during candidate generation.",
+    "howItAffectsYourReach": "Ensures user interest embeddings and tweet cluster maps are cached, enabling sub-millisecond candidate retrieval.",
+    "theGoldenRule": "Frequent interactions keep your content warm in distributed cache layers, speeding up retrieval."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/ClusterConfigMapperModule.scala",
+    "inSimpleTerms": "Provides dependency injection bindings for mapping service names to their corresponding cluster configuration profiles.",
+    "whyThisExists": "To allow dynamic multi-tenant cluster configuration lookup across diverse recommendation services.",
+    "howItAffectsYourReach": "Directs candidate retrieval to the correct cluster resolution model (e.g. 20M_145K vs 20M_145K_2020).",
+    "theGoldenRule": "Internal dependency injection module."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/ClusterConfigModule.scala",
+    "inSimpleTerms": "Configures and injects active cluster configuration settings based on service identity and environment parameters.",
+    "whyThisExists": "To load cluster metadata, dimension sizes, and model parameters into the SimClusters ANN runtime.",
+    "howItAffectsYourReach": "Defines the active cluster dimension topologies that map creator tweets to community interest vectors.",
+    "theGoldenRule": "Internal cluster configuration binding."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/ClusterDetailsModule.scala",
+    "inSimpleTerms": "Provides readable store bindings for fetching detailed cluster metadata, such as top representative terms, user counts, and cluster labels.",
+    "whyThisExists": "To enrich raw numeric cluster IDs with human-interpretable topic details and semantic descriptions.",
+    "howItAffectsYourReach": "Supplies semantic context used by topic-level recommendation filters and user interest displays.",
+    "theGoldenRule": "Align with well-defined community keywords to ensure proper semantic classification by cluster analyzers."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/ClusterTweetIndexProviderModule.scala",
+    "inSimpleTerms": "Injects readable stores that provide reverse indices mapping cluster IDs to their current top-K highest-scoring tweets.",
+    "whyThisExists": "To allow instant lookup of candidate tweets for any given interest cluster during timeline retrieval.",
+    "howItAffectsYourReach": "Being indexed in the cluster-to-tweet store is what allows your out-of-network tweet to be discovered by millions of users interested in that cluster.",
+    "theGoldenRule": "Drive strong early engagements from core community members to secure a spot in the cluster top-K reverse index."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/CustomMtlsThriftWebFormsModule.scala",
+    "inSimpleTerms": "Configures internal web forms and debugging dashboards secured with mTLS for inspecting SimClusters ANN service state.",
+    "whyThisExists": "To provide engineers with secure administrative interfaces for manual query inspection and diagnostic tracing.",
+    "howItAffectsYourReach": "Enables engineers to debug retrieval behavior and verify cluster assignment accuracy.",
+    "theGoldenRule": "Internal developer tooling with no direct reach implication."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/EmbeddingStoreModule.scala",
+    "inSimpleTerms": "Binds multi-tier embedding storage clients, combining local Memcached caching with remote Manhattan key-value backends for user and tweet embeddings.",
+    "whyThisExists": "To deliver sub-millisecond retrieval of 145,000-dimensional sparse SimClusters embedding vectors.",
+    "howItAffectsYourReach": "Provides the mathematical vector representation of your tweets and audience interests to the candidate generation engine.",
+    "theGoldenRule": "Consistent thematic focus builds dense, high-weight cluster embeddings that persist reliably in active storage tiers."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/FlagsModule.scala",
+    "inSimpleTerms": "Defines and registers runtime command-line flags for service timeouts, rate limits, cache TTLs, and dark traffic testing.",
+    "whyThisExists": "To enable flexible operations and dynamic parameter overrides in production Kubernetes/Mesos clusters.",
+    "howItAffectsYourReach": "Controls operational latency budgets and capacity thresholds for ANN retrieval.",
+    "theGoldenRule": "Internal operations configuration."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/FuturePoolProvider.scala",
+    "inSimpleTerms": "Provides bounded thread pools (FuturePools) for offloading CPU-intensive sparse dot-product calculations away from Finagle IO worker threads.",
+    "whyThisExists": "To prevent heavy vector math from starving network IO event loops, maintaining low latency and preventing request queuing.",
+    "howItAffectsYourReach": "Ensures calculation-heavy candidate ranking completes within strict timeline latency deadlines without timeouts.",
+    "theGoldenRule": "Internal concurrency management ensuring fast candidate evaluation."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/RateLimiterModule.scala",
+    "inSimpleTerms": "Configures client-side rate limiters to throttle outbound queries to backend key-value stores during load spikes.",
+    "whyThisExists": "To prevent cascading outages on downstream Manhattan and Strato storage clusters during viral platform events.",
+    "howItAffectsYourReach": "Maintains database stability under extreme load, ensuring continuous candidate retrieval without system brownouts.",
+    "theGoldenRule": "System protection module with no direct reach implication."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/ServiceNameMapperModule.scala",
+    "inSimpleTerms": "Binds service name mappers that resolve client service identities to appropriate cluster configuration variants.",
+    "whyThisExists": "To route requests from different calling products (Home, Notifications, Search) to their optimized cluster models.",
+    "howItAffectsYourReach": "Ensures appropriate topical models are queried depending on whether recommendations appear in feeds or notifications.",
+    "theGoldenRule": "Internal service discovery wiring."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/SimClustersANNCandidateSourceModule.scala",
+    "inSimpleTerms": "Wires together the core SimClustersANNCandidateSource implementation with embedding stores, index providers, and metric reporters.",
+    "whyThisExists": "To assemble the end-to-end vector candidate generation engine through Guice dependency injection.",
+    "howItAffectsYourReach": "Activates the primary out-of-network recommendation retrieval pipeline across the platform.",
+    "theGoldenRule": "Foundational candidate source wiring."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/SquaredL2NormStoreModule.scala",
+    "inSimpleTerms": "Injects readable stores for precalculated squared L2 norms of tweet embeddings used in fast cosine similarity calculations.",
+    "whyThisExists": "To avoid recalculating expensive vector magnitudes during real-time dot products, cutting cosine similarity latency in half.",
+    "howItAffectsYourReach": "Speeds up cosine similarity evaluation, enabling more candidates to be evaluated per query.",
+    "theGoldenRule": "Internal mathematical acceleration store."
+  },
+  {
+    "path": "simclusters/simclustersann/modules/StratoClientProviderModule.scala",
+    "inSimpleTerms": "Provides authenticated Strato client instances for accessing X's federated data graph.",
+    "whyThisExists": "To enable secure, low-latency lookups of platform metadata and user graphs from Strato federated storage.",
+    "howItAffectsYourReach": "Enables retrieval of user cluster affinity vectors from central graph stores.",
+    "theGoldenRule": "Internal data graph connectivity module."
+  },
+  {
+    "path": "thunder/args.rs",
+    "inSimpleTerms": "Parses CLI arguments and environment variables for the Thunder service, configuring Kafka broker connections, consumer groups, SASL auth, and batching parameters.",
+    "whyThisExists": "To allow flexible runtime configuration and secure authentication for Thunder in-network post streaming instances across data centers.",
+    "howItAffectsYourReach": "Ensures uninterrupted ingestion of real-time tweet creation events; misconfiguration would delay in-network tweet propagation.",
+    "theGoldenRule": "Post during active follower hours so fast-moving Kafka ingestion pipelines index your content immediately."
+  },
+  {
+    "path": "thunder/config.rs",
+    "inSimpleTerms": "Defines global system constants for Thunder, including maximum posts returned (1200), max videos (600), per-author reply caps (30), original post caps (50), and video caps (100).",
+    "whyThisExists": "To protect memory consumption and latency budgets by bounding candidate fan-out per author and per query.",
+    "howItAffectsYourReach": "Hard caps your in-memory footprint: Thunder retains at most 50 original posts, 30 replies, and 100 video posts per author before older posts are evicted from in-network retrieval.",
+    "theGoldenRule": "Keep a steady, paced posting schedule; publishing more than 50 tweets in a single retention window pushes your earlier tweets out of in-network retrieval."
+  },
+  {
+    "path": "thunder/deserializer.rs",
+    "inSimpleTerms": "Deserializes binary protobuf and thrift payloads received from Kafka into typed in-network tweet event structs. It handles schema versioning across event streams.",
+    "whyThisExists": "To parse high-throughput real-time message streams with minimal allocation and near-zero CPU overhead.",
+    "howItAffectsYourReach": "Ensures instant ingestion of new tweets into in-memory candidate pools; malformed payloads are dropped before entering post stores.",
+    "theGoldenRule": "Use standard, well-supported platform features and clients so tweet payloads parse cleanly into real-time stores."
+  },
+  {
+    "path": "thunder/kafka/mod.rs",
+    "inSimpleTerms": "Exports Kafka consumer listeners, utilities, and stream processing routines for ingesting live tweet events.",
+    "whyThisExists": "To organize Thunder's streaming ingestion subsystems into modular, maintainable Rust components.",
+    "howItAffectsYourReach": "Organizes real-time Kafka event streaming modules that feed new tweets into in-memory candidate stores.",
+    "theGoldenRule": "Post during peak follower activity windows so live Kafka ingestion streams immediately propagate your content to in-network caches."
+  },
+  {
+    "path": "thunder/kafka/tweet_events_listener.rs",
+    "inSimpleTerms": "Consumes raw tweet creation, reply, and deletion events from Kafka topics. It updates the in-memory PostStore in real time and monitors consumer partition lag.",
+    "whyThisExists": "To keep in-network post caches synchronized with live platform activity with sub-second latency.",
+    "howItAffectsYourReach": "Drives immediate in-network visibility; as soon as this listener processes a tweet event, it becomes available to all active followers querying Thunder.",
+    "theGoldenRule": "Instant propagation means immediate engagement velocity from your first wave of viewers is critical for downstream ranking."
+  },
+  {
+    "path": "thunder/kafka/tweet_events_listener_v2.rs",
+    "inSimpleTerms": "Provides an optimized second-generation Kafka consumer listener with enhanced backpressure control, asynchronous semaphore concurrency, and batch parsing.",
+    "whyThisExists": "To handle extreme traffic spikes (breaking news, live sporting events) without dropping events or exceeding memory limits.",
+    "howItAffectsYourReach": "Prevents ingestion lag during platform-wide viral events, guaranteeing your tweets are indexed without delay even under heavy load.",
+    "theGoldenRule": "Capitalize on trending moments in real time; high-throughput ingestion ensures your contributions are indexed instantly."
+  },
+  {
+    "path": "thunder/kafka/utils.rs",
+    "inSimpleTerms": "Provides helper functions to initialize Kafka consumer instances, subscribe to topics, and deserialize streaming message batches.",
+    "whyThisExists": "To eliminate boilerplate code across multiple Kafka listener implementations and encapsulate error-handling logic.",
+    "howItAffectsYourReach": "Ensures consumer connections remain resilient against broker failovers and network partitions.",
+    "theGoldenRule": "Reliable message consumption guarantees consistent delivery of your tweets to followers."
+  },
+  {
+    "path": "thunder/kafka_utils.rs",
+    "inSimpleTerms": "Configures TLS/SSL credentials, consumer group IDs, and topic metadata for connecting to production Kafka clusters.",
+    "whyThisExists": "To centralize secure communication and cluster topology configurations for all Kafka producers and consumers.",
+    "howItAffectsYourReach": "Maintains secure, stable event streaming pipes between tweet creation services and Thunder retrieval nodes.",
+    "theGoldenRule": "Internal streaming infrastructure with zero direct creator reach impact."
+  },
+  {
+    "path": "thunder/lib.rs",
+    "inSimpleTerms": "Declares and exposes all submodules of the Thunder crate, including storage, Kafka ingestion, Strato clients, and gRPC endpoints.",
+    "whyThisExists": "To establish the top-level crate structure for Thunder, facilitating modular compilation and unit testing.",
+    "howItAffectsYourReach": "Provides the foundational crate exports that power Thunder's in-network candidate generation engine.",
+    "theGoldenRule": "Ensure posts are well-formed and valid so Thunder's internal pipeline modules process them with minimal latency."
+  },
+  {
+    "path": "thunder/main.rs",
+    "inSimpleTerms": "Bootstraps the Thunder server, loading configuration, initializing the in-memory PostStore, launching Kafka listener tasks, and binding the gRPC service.",
+    "whyThisExists": "To coordinate the lifecycle and asynchronous tasks required to operate the high-throughput in-network post caching service.",
+    "howItAffectsYourReach": "Guarantees system uptime and sub-10ms response times for in-network timeline candidate fetching.",
+    "theGoldenRule": "High platform availability ensures your followers reliably receive your newest posts on feed refresh."
+  },
+  {
+    "path": "thunder/metrics.rs",
+    "inSimpleTerms": "Defines Prometheus telemetry gauges, histograms, and counters for Kafka ingestion rates, cache capacities, Strato client latency, and query timings.",
+    "whyThisExists": "To provide real-time operational visibility into cache hit rates, memory utilization, and network latency across Thunder clusters.",
+    "howItAffectsYourReach": "Enables automatic scaling and proactive detection of cache bottlenecks before they impact feed delivery.",
+    "theGoldenRule": "Consistent system observability guarantees minimal dropped requests and predictable feed candidate generation."
+  },
+  {
+    "path": "thunder/o2/mod.rs",
+    "inSimpleTerms": "Implements an S3/O2 blob storage client used to download and warm up initial PostStore state snapshots during service startup.",
+    "whyThisExists": "To avoid cold-start latency by pre-populating in-memory post caches from object storage backups before serving live traffic.",
+    "howItAffectsYourReach": "Ensures newly booted service replicas have full historical cache context immediately, preventing temporary reach dips during deployments.",
+    "theGoldenRule": "Historical posts remain discoverable in feeds even immediately after backend service redeployments."
+  },
+  {
+    "path": "thunder/posts/mod.rs",
+    "inSimpleTerms": "Exposes the post store module for in-memory author-sharded post caching.",
+    "whyThisExists": "To establish clean module boundaries for post storage primitives.",
+    "howItAffectsYourReach": "Exposes in-memory post storage primitives that serve in-network timeline candidate lookups.",
+    "theGoldenRule": "Maintain a steady posting pace to avoid overflowing per-author in-memory ring buffers in Thunder."
+  },
+  {
+    "path": "thunder/posts/post_store.rs",
+    "inSimpleTerms": "Maintains an in-memory, thread-safe cache of recent in-network posts, replies, and video content sharded by author. It handles lightning-fast lookups and enforces per-author capacity limits.",
+    "whyThisExists": "To serve in-network timeline queries with single-digit millisecond latency without burdening backend key-value stores.",
+    "howItAffectsYourReach": "Limits total tracked original posts, replies, and videos per author in memory; excessive posting pushes your older posts out of the in-network candidate cache prematurely.",
+    "theGoldenRule": "Pace your publications strategically; spamming dozens of posts in rapid succession evicts your earlier content from the immediate retrieval cache."
+  },
+  {
+    "path": "thunder/schema/events.rs",
+    "inSimpleTerms": "Contains generated Rust data structures and deserialization logic for platform event schemas, tracking user engagements and status changes.",
+    "whyThisExists": "To provide strongly typed representations for complex event structures streaming through the platform.",
+    "howItAffectsYourReach": "Accurately decodes engagement events that feed real-time candidate ranking and user interaction history.",
+    "theGoldenRule": "Encourage authentic viewer actions so downstream event streams capture strong positive engagement signals."
+  },
+  {
+    "path": "thunder/schema/media_common.rs",
+    "inSimpleTerms": "Defines shared media metadata structures, such as aspect ratios, media categories, duration, and color palettes for multimedia posts.",
+    "whyThisExists": "To provide standardized media typing across ingestion, caching, and ranking subsystems.",
+    "howItAffectsYourReach": "Ensures rich media attributes (video duration, image size) are preserved for multi-modal feature extractors and video candidate filters.",
+    "theGoldenRule": "Attach high-quality media with clear visual metadata to qualify for specialized video and media carousels."
+  },
+  {
+    "path": "thunder/schema/media_entity.rs",
+    "inSimpleTerms": "Defines specific media entity types including photos, videos, animated GIFs, and broadcast streams attached to tweets.",
+    "whyThisExists": "To accurately distinguish between different visual content types and their associated dimensions and playback URLs.",
+    "howItAffectsYourReach": "Drives specialized media filtering and ranking boosts in multimedia-heavy feed surfaces.",
+    "theGoldenRule": "Format video and visual media properly to ensure full classification and eligibility across all media-specific recommendation surfaces."
+  },
+  {
+    "path": "thunder/schema/mod.rs",
+    "inSimpleTerms": "Exports generated schema modules for tweets, users, media entities, and platform events.",
+    "whyThisExists": "To unify schema definitions into a single, accessible module namespace.",
+    "howItAffectsYourReach": "Aggregates strongly typed schema definitions for tweets, users, and media entities in Thunder.",
+    "theGoldenRule": "Utilize standard media and text formats to ensure seamless schema serialization across Thunder ingestion pipelines."
+  },
+  {
+    "path": "thunder/schema/tweet.rs",
+    "inSimpleTerms": "Provides generated Rust structs for complete tweet objects, containing author IDs, text, hashtags, mentions, URLs, retweet counts, and safety labels.",
+    "whyThisExists": "To represent full tweet domain models with strict type safety and deserialization performance.",
+    "howItAffectsYourReach": "Captures all primary post attributes that determine filter compliance and machine learning feature extraction.",
+    "theGoldenRule": "Craft comprehensive, high-quality posts with concise text and relevant media to maximize positive feature values."
+  },
+  {
+    "path": "thunder/schema/tweet_events.rs",
+    "inSimpleTerms": "Defines schema structures for tweet lifecycle events such as create, delete, favorite, retweet, and reply actions.",
+    "whyThisExists": "To represent fine-grained tweet mutation events transmitted across message buses.",
+    "howItAffectsYourReach": "Processes real-time deletions and engagement spikes, dynamically adjusting candidate availability and scoring signals.",
+    "theGoldenRule": "Avoid frequent tweet deletions; positive cumulative engagement over time builds lasting algorithmic authority."
+  },
+  {
+    "path": "thunder/schema/tweet_media.rs",
+    "inSimpleTerms": "Defines detailed media payload schemas including video bitrates, aspect ratios, thumbnails, and transcoding status.",
+    "whyThisExists": "To support advanced multimedia candidate evaluation and video player compatibility checks.",
+    "howItAffectsYourReach": "Ensures video posts have valid encoding and aspect ratios, preventing them from being filtered out of video-first feeds.",
+    "theGoldenRule": "Upload clean, properly encoded vertical (9:16) or widescreen (16:9) video to maximize playback smoothness and algorithmic score."
+  },
+  {
+    "path": "thunder/schema/user.rs",
+    "inSimpleTerms": "Contains comprehensive user profile schemas, encompassing account settings, follower counts, verification badges, safety flags, and screen names.",
+    "whyThisExists": "To provide strongly typed user representations across caching, filtering, and author scoring pipelines.",
+    "howItAffectsYourReach": "Verification badges, follower health metrics, and safety flags directly influence downstream author-level multipliers and candidate qualification.",
+    "theGoldenRule": "Maintain a verified, compliant account with healthy follower growth to secure premium author multipliers in ranking."
+  },
+  {
+    "path": "thunder/strato_client.rs",
+    "inSimpleTerms": "Communicates with X's centralized Strato data graph service to fetch user following lists and social graph connections over HTTP/JSON.",
+    "whyThisExists": "To retrieve fresh in-network social graph relationships dynamically when serving timeline candidate requests.",
+    "howItAffectsYourReach": "Determines which followers receive your posts in their in-network candidate pool; active mutual follows ensure priority candidate fetching.",
+    "theGoldenRule": "Build meaningful relationships with active accounts who frequently check their feeds to guarantee consistent in-network delivery."
+  },
+  {
+    "path": "thunder/thunder_service.rs",
+    "inSimpleTerms": "Implements the core gRPC Thunder server. It receives candidate fetch requests with user following lists, queries the in-memory PostStore, and returns sorted candidate posts.",
+    "whyThisExists": "To serve as the dedicated, ultra-low-latency in-network candidate generator for the Home Timeline.",
+    "howItAffectsYourReach": "Sorts candidate posts by recency and returns up to 1,200 posts per query, serving as the primary source of in-network content in For You and Following feeds.",
+    "theGoldenRule": "Timely posting ensures your content is in the top segment of Thunder's 1,200 candidate window when your followers open the app."
+  },
+  {
+    "path": "vm-ranker/args.rs",
+    "inSimpleTerms": "Defines CLI flags and runtime configuration parameters for the VM Ranker service, including port bindings, concurrency semaphores, and memory bounds.",
+    "whyThisExists": "To allow dynamic operational tuning of thread pools, latency deadlines, and batch sizes in high-throughput containerized environments.",
+    "howItAffectsYourReach": "Configures runtime concurrency, memory bounds, and latency budgets for VM Ranker microservices.",
+    "theGoldenRule": "Consistent high-volume engagement helps your content survive server concurrency throttling and load shedding during traffic spikes."
+  },
+  {
+    "path": "vm-ranker/dpp.rs",
+    "inSimpleTerms": "Implements Determinantal Point Processes (DPP) to maximize diversity and minimize redundancy in top-ranked candidate sets. It penalizes pairs of items that have high embedding similarity.",
+    "whyThisExists": "To prevent recommendation feeds from showing repetitive, nearly identical posts on the same topic.",
+    "howItAffectsYourReach": "If multiple posts cover identical themes, DPP applies diversity penalties (controlled by theta), selecting only the highest-scoring post and demoting duplicate topics.",
+    "theGoldenRule": "Diversify your post angles, formats, and phrasing; publishing repetitive variations on the same topic leads to severe diversity demotions."
+  },
+  {
+    "path": "vm-ranker/embedding_store.rs",
+    "inSimpleTerms": "Fetches and caches multi-modal multimedia embeddings from external storage and preloading pipelines for candidate similarity computation.",
+    "whyThisExists": "To supply sub-millisecond access to dense vector representations for video and multi-modal candidates during real-time ranking.",
+    "howItAffectsYourReach": "Ensures candidate posts have complete multimedia embeddings available for DPP diversity ranking and affinity scoring.",
+    "theGoldenRule": "Upload high-quality, natively encoded video and media to ensure complete multi-modal embedding generation."
+  },
+  {
+    "path": "vm-ranker/helpers.rs",
+    "inSimpleTerms": "Provides hardware-accelerated SIMD (AVX-512, AVX2, NEON) dot product and mathematical kernels for half-precision f16 vector similarity calculations.",
+    "whyThisExists": "To execute hundreds of thousands of vector dot products per second within strict millisecond latency budgets on modern CPU architectures.",
+    "howItAffectsYourReach": "Enables exhaustive real-time comparison across large pools of candidate tweets without dropping candidates due to ranking timeouts.",
+    "theGoldenRule": "Consistent high-quality content benefits from deep candidate pool evaluation rather than being skipped due to performance throttling."
+  },
+  {
+    "path": "vm-ranker/lib.rs",
+    "inSimpleTerms": "Declares the root modules for the VM Ranker crate, assembling DPP algorithms, gRPC ranking services, metric collectors, and embedding stores.",
+    "whyThisExists": "To establish the internal modular architecture and crate API boundaries for the Value Model ranking system.",
+    "howItAffectsYourReach": "Establishes library module boundaries for VM Ranker's diversity reranking and model scoring services.",
+    "theGoldenRule": "Produce diverse, high-retention multimedia content that satisfies both base ranking and diversity reranking models."
+  },
+  {
+    "path": "vm-ranker/main.rs",
+    "inSimpleTerms": "Initializes and launches the VM Ranker gRPC microservice, bootstrapping telemetry endpoints, signal handlers, and Tokio async runtimes.",
+    "whyThisExists": "To provide a standalone, production-ready binary entry point for high-throughput video and multimedia ranking services.",
+    "howItAffectsYourReach": "Ensures high availability and zero-downtime ranking request handling for video and multimedia feeds.",
+    "theGoldenRule": "Maintain consistent publishing habits to benefit from reliable, 24/7 service availability."
+  },
+  {
+    "path": "vm-ranker/metrics.rs",
+    "inSimpleTerms": "Defines Prometheus metrics for VM Ranker, tracking DPP execution duration, candidate counts, average similarity scores, and embedding cache hit rates.",
+    "whyThisExists": "To deliver real-time operational telemetry and alert engineering teams to diversity ranking anomalies or latency regressions.",
+    "howItAffectsYourReach": "Drives automated capacity scaling and performance alerting to prevent candidate dropping during traffic spikes.",
+    "theGoldenRule": "Unique, engaging content avoids negative diversity metrics and maintains high flow-through rates."
+  },
+  {
+    "path": "vm-ranker/ranker_service.rs",
+    "inSimpleTerms": "Serves high-throughput gRPC ranking requests by orchestrating candidate scoring, model inference, and diversity reranking. It enforces concurrency bounds using asynchronous semaphores.",
+    "whyThisExists": "To act as the core machine-learning ranking endpoint for video and multimedia feed candidate selection.",
+    "howItAffectsYourReach": "Applies strict time budgets and concurrency limits; candidates that score highest across model predictions and diversity metrics survive final selection.",
+    "theGoldenRule": "Create high-retention, high-engagement multimedia content that achieves strong base predictive scores from the ranking models."
+  },
+  {
+    "path": "vm-ranker/scoring/dpp_model.rs",
+    "inSimpleTerms": "Prepares candidate score vectors and vector norms for the DPP algorithm, falling back to normalized synthetic embeddings when vectors are missing. It produces the finalized diversified ranked list.",
+    "whyThisExists": "To bridge raw gRPC request candidate inputs with optimized SIMD mathematical kernels for diversity reranking.",
+    "howItAffectsYourReach": "Calculates the trade-off between individual prediction quality and batch diversity; unique perspectives receive higher survival rates into final user feeds.",
+    "theGoldenRule": "Provide unique angles and fresh vocabulary on popular topics to avoid being clustered and pruned out by diversity deduplication."
+  },
+  {
+    "path": "vm-ranker/scoring/mod.rs",
+    "inSimpleTerms": "Defines the scoring module interface and exports DPP model evaluation pipelines for candidate post ranking.",
+    "whyThisExists": "To provide a clean module hierarchy that decouples scoring abstractions from specific model implementations.",
+    "howItAffectsYourReach": "Coordinates the scoring and reranking passes that establish the final order of posts presented in media-centric timelines.",
+    "theGoldenRule": "Optimize for holistic post quality rather than single-metric hacks to perform well under multi-objective scoring."
+  }
+]

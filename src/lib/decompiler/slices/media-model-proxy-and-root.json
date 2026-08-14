@@ -1,0 +1,716 @@
+[
+  {
+    "path": "CODE_OF_CONDUCT.md",
+    "inSimpleTerms": "Defines the open source community standards, guidelines, and behavioral pledge for engineers and public contributors collaborating on the Twitter Recommendation Algorithm repository.",
+    "whyThisExists": "Establishes institutional governance, anti-harassment policies, and reporting escalation paths for public open-source contributions under standard Contributor Covenant guidelines.",
+    "howItAffectsYourReach": "No direct feed ranking impact; governs contributor repository interactions, PR review decorum, and community compliance.",
+    "theGoldenRule": "Maintain professional, respectful, and constructive code review discourse when discussing algorithmic heuristics and moderation mechanics."
+  },
+  {
+    "path": "LICENSE",
+    "inSimpleTerms": "The GNU Affero General Public License v3.0 (AGPL-3.0) legal agreement under which Twitter/X released its recommendation algorithm source code to the public.",
+    "whyThisExists": "Enforces full open-source transparency by requiring any modified network-deployed versions of the recommendation engine or ranking pipeline to also make their complete source code publicly accessible under AGPL-3.0.",
+    "howItAffectsYourReach": "Ensures algorithmic accountability and legal compliance across derived recommendation services and third-party feed simulators.",
+    "theGoldenRule": "Any derivative service, ranking fork, or hosted modification of this pipeline must remain open-source under identical AGPL-3.0 copyleft terms."
+  },
+  {
+    "path": "README.md",
+    "inSimpleTerms": "The master architectural documentation that outlines Twitter/X's end-to-end recommendation pipeline, explaining candidate sourcing, Heavy Ranker neural networks, SimClusters, and visibility filtering.",
+    "whyThisExists": "Provides the structural blueprint for how hundreds of microservices orchestrate the extraction of ~1,500 candidate tweets from a pool of 500 million daily tweets to construct the 'For You' timeline in under 1.5 seconds.",
+    "howItAffectsYourReach": "Explains the foundational 50/50 balance between In-Network (RealGraph/Search Index) and Out-of-Network (SimClusters/GraphJet/UTG) candidate generation stages that determine initial post discovery.",
+    "theGoldenRule": "Optimize for bidirectional graph engagement (mutual interactions) and high-affinity topic clustering to maximize both In-Network recall and Out-of-Network candidate generation."
+  },
+  {
+    "path": "docs/BIDIRECTIONAL_BOOST_CHANGE.md",
+    "inSimpleTerms": "Architectural change log and post-mortem detailing the algorithmic adjustment that prioritizes bidirectional follow graphs and mutual conversation engagement over one-way broadcast following.",
+    "whyThisExists": "Documents the transition to heavily weight mutual interaction graphs, counteracting one-sided broadcast spam and low-engagement follower hoarding.",
+    "howItAffectsYourReach": "Significantly amplifies tweets when the author and audience have reciprocal follow or reply histories (up to a 2x-4x boost multiplier in RealGraph scoring), while dampening passive unidirectional follower distributions.",
+    "theGoldenRule": "Cultivate authentic two-way conversations and mutual connections rather than passive broadcast follower counts to capitalize on bidirectional graph boosts."
+  },
+  {
+    "path": "media-model-proxy/BUILD.bazel",
+    "inSimpleTerms": "Root Bazel build definition that aggregates and exposes the `media-model-proxy` service binary and library targets across Twitter's monorepo build graph.",
+    "whyThisExists": "Defines modular compilation boundaries, JVM memory allocation limits, and dependency resolution rules for the Media Model Proxy Finatra microservice.",
+    "howItAffectsYourReach": "Ensures the media annotation infrastructure builds deterministically; compilation failures would halt deployment of updated media safety, hateful symbol, and categorization models.",
+    "theGoldenRule": "Maintain clean dependency modularity across Finagle Thrift clients and DeepBird runtime wrappers to avoid JVM classpath conflicts."
+  },
+  {
+    "path": "media-model-proxy/README.rst",
+    "inSimpleTerms": "Technical overview and operational runbook for the Media Model Proxy (cortex-media-annotator), explaining how it mediates between upstream media uploaders and backend DeepBird v2 ML models.",
+    "whyThisExists": "Documents the service's role as a unified high-throughput gateway that handles image downloading from BlobStore, batched model scoring, scribe audit logging, and feature flag management.",
+    "howItAffectsYourReach": "Governs how visual assets attached to tweets are analyzed for NSFW, gore, hateful iconography, and topic categories before reaching the recommendation feed.",
+    "theGoldenRule": "Ensure media attachments are compliant with safety policies and high in topical clarity to prevent automated downstream suppression or safety downgrades."
+  },
+  {
+    "path": "media-model-proxy/config/decider.yml",
+    "inSimpleTerms": "Central dynamic configuration file declaring Decider feature flags and percentage-based traffic splits for every vision model hosted on DeepBird v2.",
+    "whyThisExists": "Enables zero-downtime canary deployments, percentage ramp-ups, and instant kill switches for model inference without redeploying the JVM binary during cluster outages.",
+    "howItAffectsYourReach": "Controls the rollout percentage of safety filters (e.g. `xx_nsfw_model_enabled`, `violence_and_gore_model_enabled`); when enabled at 100%, every media upload is strictly evaluated for reach-limiting violations.",
+    "theGoldenRule": "Assume safety and category classifiers are active at 100% saturation in production; never rely on partial traffic rollout bypasses."
+  },
+  {
+    "path": "media-model-proxy/integrationtest/scripts/local.sh",
+    "inSimpleTerms": "Local developer execution script that provisions an isolated test environment with mocked DeepBird endpoints, local Deciders, and test Thrift servers.",
+    "whyThisExists": "Allows ML systems engineers to validate end-to-end Thrift RPC requests, BlobStore fetching, and model response serialization on local developer workstations.",
+    "howItAffectsYourReach": "Ensures proxy routing and image deserialization bugs are caught prior to staging and production deployments.",
+    "theGoldenRule": "Validate model descriptor Thrift mappings against realistic mock payloads before merging proxy modifications."
+  },
+  {
+    "path": "media-model-proxy/integrationtest/scripts/workflow.sh",
+    "inSimpleTerms": "Continuous Integration (CI) orchestration script that automates build verification, unit test execution, and integration test validation for the media proxy.",
+    "whyThisExists": "Enforces automated quality gates in the deployment pipeline, preventing broken model client proxies or malformed decider configurations from reaching production clusters.",
+    "howItAffectsYourReach": "Protects the availability and low-latency SLA of media safety filters, preventing unclassified or erroneously flagged content from destabilizing the feed.",
+    "theGoldenRule": "Always verify that automated CI workflow suites pass all descriptor contracts across both staging and production profiles."
+  },
+  {
+    "path": "media-model-proxy/integrationtest/src/test/resources/com/twitter/media_understanding/model_proxy/integrationtest/BUILD.bazel",
+    "inSimpleTerms": "Bazel resource definition exposing test fixtures, mock data files, and descriptor models for integration test execution.",
+    "whyThisExists": "Packages static integration test resources (such as `models.txt`) into the Bazel hermetic test sandbox.",
+    "howItAffectsYourReach": "Guarantees test suite reproducibility across all CI workers and developer environments.",
+    "theGoldenRule": "Keep integration test fixture dependencies hermetic within Bazel build boundaries."
+  },
+  {
+    "path": "media-model-proxy/integrationtest/src/test/resources/com/twitter/media_understanding/model_proxy/integrationtest/models.txt",
+    "inSimpleTerms": "Manifest listing the active ML models (NSFW, Gore, Category Classification, Hateful Symbols, Fingerprinting) subject to end-to-end integration validation.",
+    "whyThisExists": "Provides a single source of truth for all production model IDs that must be validated during integration test sweeps.",
+    "howItAffectsYourReach": "Defines the exact suite of visual comprehension and safety models that evaluate every tweet media upload.",
+    "theGoldenRule": "Audit active model IDs against production deciders to ensure all media classification dimensions are properly monitored."
+  },
+  {
+    "path": "media-model-proxy/integrationtest/src/test/scala/com/twitter/media_understanding/model_proxy/integrationtest/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for the Scala integration test suite covering end-to-end Media Model Proxy Thrift service endpoints.",
+    "whyThisExists": "Compiles and links the integration test suite against Finatra test harnesses, TwitterUtil, and Finagle Thrift client libraries.",
+    "howItAffectsYourReach": "Prevents regression in end-to-end RPC serialization and model inference pipelining.",
+    "theGoldenRule": "Keep integration test targets decoupled from live network endpoints using embedded Finatra server harnesses."
+  },
+  {
+    "path": "media-model-proxy/integrationtest/src/test/scala/com/twitter/media_understanding/model_proxy/integrationtest/MediaModelProxyService.scala",
+    "inSimpleTerms": "Helper class that spins up an in-memory Media Model Proxy Finatra Thrift server with overridden test modules for integration testing.",
+    "whyThisExists": "Provides a lifecycle-managed test server fixture that can bind to ephemeral ports and intercept downstream DeepBird / BlobStore RPC calls during test assertions.",
+    "howItAffectsYourReach": "Verifies that the proxy correctly parses Thrift media requests and returns valid safety and category scores.",
+    "theGoldenRule": "Use isolated in-memory Finatra servers with mock client injection for deterministic integration testing."
+  },
+  {
+    "path": "media-model-proxy/integrationtest/src/test/scala/com/twitter/media_understanding/model_proxy/integrationtest/MediaModelProxyTest.scala",
+    "inSimpleTerms": "Comprehensive integration test suite that sends real Thrift annotation requests to the test proxy server and asserts correct response parsing for various image categories.",
+    "whyThisExists": "Validates the full request lifecycle: Thrift decoding, BlobStore image retrieval, DeepBird feature conversion, inference execution, and Thrift response encoding.",
+    "howItAffectsYourReach": "Guarantees that classification scores (e.g. NSFW probability, hateful symbol detection) accurately reflect model outputs before being written to tweet metadata.",
+    "theGoldenRule": "Confirm that all model descriptors maintain strict contract backward compatibility across Thrift schema revisions."
+  },
+  {
+    "path": "media-model-proxy/loadtest/BUILD",
+    "inSimpleTerms": "Bazel target package definition for the Media Model Proxy load testing and stress benchmarking framework.",
+    "whyThisExists": "Enables compilation and packaging of high-concurrency load generation binaries capable of simulating peak Twitter traffic loads.",
+    "howItAffectsYourReach": "Ensures the service can withstand tens of thousands of QPS during breaking news events without dropping media requests or causing downstream feed delays.",
+    "theGoldenRule": "Benchmark proxy throughput and p99 latency against production-scale synthetic load profiles."
+  },
+  {
+    "path": "media-model-proxy/loadtest/config/loadtest.yaml",
+    "inSimpleTerms": "Configuration file specifying concurrency levels, target QPS rates, duration, and endpoint URIs for load test simulations.",
+    "whyThisExists": "Allows performance engineers to parameterize stress test runs, ramping from baseline traffic to 5x peak burst loads.",
+    "howItAffectsYourReach": "Validates that under heavy server saturation, load-shedding filters gracefully degrade optional models while preserving critical safety filters.",
+    "theGoldenRule": "Ensure load testing parameters accurately reflect production traffic distributions between image classification and visual fingerprinting."
+  },
+  {
+    "path": "media-model-proxy/loadtest/launcher.sh",
+    "inSimpleTerms": "Shell script that orchestrates the execution of the load testing binary with configured JVM garbage collection flags and target cluster hosts.",
+    "whyThisExists": "Standardizes the execution environment for stress tests across Aurora / Mesos test clusters.",
+    "howItAffectsYourReach": "Helps engineers identify GC pauses or thread contention that could introduce p99 latency spikes in media processing.",
+    "theGoldenRule": "Tune JVM heap and garbage collection parameters under realistic load test conditions to avoid inference latency degradation."
+  },
+  {
+    "path": "media-model-proxy/loadtest/logs/.gitignore",
+    "inSimpleTerms": "Git ignore rule that prevents ephemeral benchmark logs, latency histograms, and GC traces from being committed to the repository.",
+    "whyThisExists": "Maintains repository cleanliness by excluding gigabytes of transient load testing metrics and benchmark dumps.",
+    "howItAffectsYourReach": "No direct feed impact; maintains build repo hygiene.",
+    "theGoldenRule": "Keep performance logs and execution traces out of version control."
+  },
+  {
+    "path": "media-model-proxy/loadtest/src/scala/com/twitter/media_understanding/media_model_proxy/loadtest/BUILD",
+    "inSimpleTerms": "Bazel build rule for the Scala load test runner and log sampling utilities.",
+    "whyThisExists": "Compiles high-performance Finagle Thrift clients and async request pipelines tailored for load generation.",
+    "howItAffectsYourReach": "Verifies that load generator clients accurately simulate real-world Thrift call patterns without client-side bottlenecks.",
+    "theGoldenRule": "Isolate load generation dependencies to avoid polluting core production libraries."
+  },
+  {
+    "path": "media-model-proxy/loadtest/src/scala/com/twitter/media_understanding/media_model_proxy/loadtest/MediaModelProxyLoadTest.scala",
+    "inSimpleTerms": "Load testing runner that generates thousands of concurrent Thrift requests against Media Model Proxy using Finagle async clients and records latency percentiles.",
+    "whyThisExists": "Stress-tests proxy connection pools, thread pools, and CPU utilization under simulated peak Twitter upload traffic.",
+    "howItAffectsYourReach": "Identifies system saturation points where high inference latency could cause downstream recommendation pipelines to time out on media scoring.",
+    "theGoldenRule": "Design async service pipelines to maintain sub-50ms p99 latency even under multi-thousand QPS stress loads."
+  },
+  {
+    "path": "media-model-proxy/loadtest/src/scala/com/twitter/media_understanding/media_model_proxy/loadtest/MediaModelProxyLogSampler.scala",
+    "inSimpleTerms": "Utility that replays and samples real production Scribe query logs to produce realistic, non-synthetic request distributions for load tests.",
+    "whyThisExists": "Synthetic load tests often miss real-world request skews (e.g. image size distributions, popular model ID distributions); replaying sampled logs accurately reproduces production workloads.",
+    "howItAffectsYourReach": "Ensures performance tuning reflects actual creator image formats, aspect ratios, and category requests.",
+    "theGoldenRule": "Replay production-derived traffic samples to accurately profile cache hit rates and memory allocation under real user distributions."
+  },
+  {
+    "path": "media-model-proxy/scripts/local.sh",
+    "inSimpleTerms": "Developer startup script that launches the Media Model Proxy service locally with staging credentials, local deciders, and mock backends.",
+    "whyThisExists": "Enables rapid iteration for developers modifying model descriptors, deciders, or Thrift controllers without deploying to remote clusters.",
+    "howItAffectsYourReach": "Speeds up development and validation cycles for new media understanding features and safety classifiers.",
+    "theGoldenRule": "Use local script configurations to verify model descriptor conversions against sample images before submitting PRs."
+  },
+  {
+    "path": "media-model-proxy/src/main/resources/BUILD",
+    "inSimpleTerms": "Bazel build file defining packaging and distribution rules for all static configuration resources, SAML metadata, and sample test images.",
+    "whyThisExists": "Ensures all non-code assets (XML metadata, JSON instance configs, test assets) are bundled correctly into the deployable JAR / PEX bundle.",
+    "howItAffectsYourReach": "Guarantees runtime availability of critical service configs and authentication metadata.",
+    "theGoldenRule": "Explicitly declare all runtime resource dependencies in Bazel build targets to avoid missing resource exceptions at runtime."
+  },
+  {
+    "path": "media-model-proxy/src/main/resources/META-INF/services/com.twitter.util.tunable.ServiceLoadedTunableMap",
+    "inSimpleTerms": "Java ServiceLoader registration file that binds dynamic Tunable configuration maps into Twitter's runtime utility framework.",
+    "whyThisExists": "Enables zero-restart dynamic reconfiguration of concurrency limits, timeouts, and load-shedding parameters via Twitter's centralized Tunables infrastructure.",
+    "howItAffectsYourReach": "Allows operations teams to dynamically adjust model scoring timeouts and load-shedding thresholds in real time during traffic spikes.",
+    "theGoldenRule": "Register tunable service providers cleanly so dynamic parameter changes take effect without service restarts."
+  },
+  {
+    "path": "media-model-proxy/src/main/resources/com/twitter/tunables/cortex_media_annotator/instances.json",
+    "inSimpleTerms": "JSON configuration defining default tunable keys, IDs, and dynamic thresholds for the cortex-media-annotator proxy instance.",
+    "whyThisExists": "Specifies instance-level knobs such as request concurrency limits and model-specific execution timeouts for the media annotator.",
+    "howItAffectsYourReach": "Tunes latency budgets for visual model inference; aggressive timeouts could drop non-critical media category classifications under load.",
+    "theGoldenRule": "Set reasonable default execution budgets in instance tunables to protect critical safety filters from being shed."
+  },
+  {
+    "path": "media-model-proxy/src/main/resources/okta_features_metadata.xml",
+    "inSimpleTerms": "SAML identity provider metadata configuration for Okta authentication in staging and development management interfaces.",
+    "whyThisExists": "Secures administrative endpoints, feature flag toggles, and internal debugging consoles behind Okta single sign-on (SSO).",
+    "howItAffectsYourReach": "Protects internal algorithmic controls and feature flags from unauthorized external tampering.",
+    "theGoldenRule": "Enforce strict SSO authentication boundaries for all internal administrative and feature-flag management tools."
+  },
+  {
+    "path": "media-model-proxy/src/main/resources/okta_features_prod_metadata.xml",
+    "inSimpleTerms": "Production SAML identity provider metadata configuration for Okta authentication on production management endpoints.",
+    "whyThisExists": "Enforces enterprise-grade production access control for Cortex media annotator admin panels and operational monitoring consoles.",
+    "howItAffectsYourReach": "Secures production decider overrides and model deployment switches against unauthenticated modifications.",
+    "theGoldenRule": "Audit production authentication metadata regularly to ensure administrative access is strictly restricted to authorized on-call engineers."
+  },
+  {
+    "path": "media-model-proxy/src/main/resources/sample-image.jpg",
+    "inSimpleTerms": "A standard JPEG test image bundled with the service for smoke tests, health checks, and baseline model inference validation.",
+    "whyThisExists": "Provides a fixed, known binary asset that can be passed through BlobStore fetchers and DeepBird models during startup health checks and canary validation.",
+    "howItAffectsYourReach": "Ensures the image decoding and tensor transformation pipeline is functional before the service accepts public traffic.",
+    "theGoldenRule": "Use fixed, deterministic test assets during startup probes to verify end-to-end model inference pipelines."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/app/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for the main Media Model Proxy application entry point and server startup classes.",
+    "whyThisExists": "Compiles the Finatra Thrift server binary, bundling all controllers, dependency injection modules, and monitoring hooks.",
+    "howItAffectsYourReach": "Defines the deployable artifact that powers visual understanding across all tweet media uploads.",
+    "theGoldenRule": "Ensure clean separation between application bootstrap code and domain logic for fast, reliable server startup."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/app/ModelClientValidator.scala",
+    "inSimpleTerms": "Startup validator that pings and verifies connectivity to all configured DeepBird v2 model endpoints before the server marks itself healthy in routing meshes.",
+    "whyThisExists": "Prevents the server from accepting live traffic if downstream model endpoints (NSFW, Gore, Categories) are unreachable or misconfigured.",
+    "howItAffectsYourReach": "Protects against silent failures where media uploads might bypass safety and topic categorization due to broken backend connections.",
+    "theGoldenRule": "Fail fast at startup if critical downstream model dependencies fail health validation probes."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/app/Server.scala",
+    "inSimpleTerms": "Main Finatra Thrift server definition that configures port bindings, filter chains, dependency injection modules, and lifecycle warm-up sequences.",
+    "whyThisExists": "Assembles the entire Media Model Proxy microservice, setting up Twitter Server admin endpoints, load-shedding filters, Decider configurations, and Thrift routing.",
+    "howItAffectsYourReach": "The foundational serving layer through which all media classification requests must pass before tweets can be indexed or served.",
+    "theGoldenRule": "Configure warm-up sequences and graceful shutdown handlers to prevent request drops during service redeployments."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/clients/BUILD.bazel",
+    "inSimpleTerms": "Bazel build definition for the model client abstraction layer and DeepBird integration clients.",
+    "whyThisExists": "Compiles client interfaces, switching mechanisms, and DeepBird v2 Thrift adapters with proper dependency boundaries.",
+    "howItAffectsYourReach": "Guarantees reliable RPC communication between the proxy and distributed GPU/CPU model inference clusters.",
+    "theGoldenRule": "Decouple generic model client interfaces from vendor-specific or cluster-specific RPC protocols."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/clients/DeepbirdClient.scala",
+    "inSimpleTerms": "Production Finagle Thrift client that communicates with Twitter's DeepBird v2 machine learning serving clusters to execute tensor inference.",
+    "whyThisExists": "Translates high-level media requests into DeepBird v2 prediction requests, handling connection pooling, retries, latency stats, and response unpacking.",
+    "howItAffectsYourReach": "The primary execution engine for visual deep learning; returns classification probabilities and dense embeddings that power both safety filtering and topic recommendation.",
+    "theGoldenRule": "Maintain low request payload overhead and optimal connection pooling to keep deep learning inference latency within strict SLA limits."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/clients/DummyEmbeddingsClient.scala",
+    "inSimpleTerms": "Mock and fallback model client that returns deterministic, synthetic embeddings and classification responses for testing and disaster recovery.",
+    "whyThisExists": "Enables local testing without access to live DeepBird GPU clusters and provides a safe fallback mechanism during total backend model cluster outages.",
+    "howItAffectsYourReach": "When fallback mode is triggered, returns safe default embeddings to prevent total service failure while alerting operations to backend cluster degradation.",
+    "theGoldenRule": "Ensure mock/fallback clients return structurally identical feature vectors to prevent downstream deserialization crashes."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/clients/ModelClient.scala",
+    "inSimpleTerms": "Core Scala trait (interface) defining the contract for model scoring clients, accepting media tensors and returning model predictions.",
+    "whyThisExists": "Provides a clean polymorphic abstraction layer so the proxy can transparently switch between live DeepBird clusters, dark traffic proxies, and mock clients.",
+    "howItAffectsYourReach": "Standardizes prediction contracts across diverse visual models (classification, embeddings, detection).",
+    "theGoldenRule": "Adhere strictly to asynchronous Future-based contracts to avoid blocking Finagle event loops during model evaluation."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/clients/SwitchingModelClient.scala",
+    "inSimpleTerms": "A dynamic router client that inspects Decider feature flags to route traffic between live DeepBird models, dark-traffic canaries, or mock fallbacks.",
+    "whyThisExists": "Enables zero-downtime model migration, canary rollouts, and dark-traffic shadowing where a new model receives traffic in parallel to evaluate accuracy without impacting production.",
+    "howItAffectsYourReach": "Determines whether your media is scored by legacy classifiers or newly deployed computer vision models during A/B testing phases.",
+    "theGoldenRule": "Monitor dark-traffic telemetry and canary divergence metrics before promoting new vision models to 100% serving."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/config/BUILD",
+    "inSimpleTerms": "Bazel build file for the configuration package, compiling Deciders, Tunables, and Feature flag wrappers.",
+    "whyThisExists": "Packages configuration parsing logic and dynamic flag evaluation classes for the media proxy.",
+    "howItAffectsYourReach": "Ensures configuration modules compile cleanly with full access to Twitter's dynamic feature flagging libraries.",
+    "theGoldenRule": "Keep configuration dependencies lightweight to avoid slowing down build and test cycles."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/config/Config.scala",
+    "inSimpleTerms": "Simple configuration case class holding global service parameters, cluster identifiers, and environment metadata.",
+    "whyThisExists": "Centralizes service-level environment properties (e.g. data center zone, environment name) into an immutable container.",
+    "howItAffectsYourReach": "Helps route requests to the nearest regional DeepBird and BlobStore data center to minimize latency.",
+    "theGoldenRule": "Use immutable configuration objects to ensure thread safety across high-concurrency request handlers."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/config/Deciders.scala",
+    "inSimpleTerms": "Enumeration and helper definitions for all Decider feature flags used across the Media Model Proxy service.",
+    "whyThisExists": "Provides type-safe access to string-based Decider keys, preventing runtime typos and missing flag errors.",
+    "howItAffectsYourReach": "Defines the exact flag names that gate NSFW detection, gore filtering, hateful symbol tagging, and category classification.",
+    "theGoldenRule": "Use type-safe decider constants instead of raw strings to guarantee feature flag integrity across releases."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/config/Features.scala",
+    "inSimpleTerms": "Service class that evaluates dynamic feature flags and decider percentages to determine which models should execute for a given request.",
+    "whyThisExists": "Encapsulates complex feature flag logic (e.g., checking if dark traffic is enabled, if a specific model ID is active, or if load shedding should bypass embeddings).",
+    "howItAffectsYourReach": "Directly governs which computer vision models score your upload; inactive models are skipped, while active ones produce annotations that govern feed distribution.",
+    "theGoldenRule": "Ensure feature flag evaluations are ultra-fast in-memory operations to avoid adding latency overhead to the request path."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/config/TunableMap.scala",
+    "inSimpleTerms": "Factory that constructs dynamic Tunable maps backed by Twitter's central distributed configuration service.",
+    "whyThisExists": "Allows operational knobs (timeouts, rate limits, load shedding percentages) to be modified globally in seconds without deploying code.",
+    "howItAffectsYourReach": "Under extreme traffic spikes, operations can dynamically raise load-shedding percentages to shed non-essential media classification jobs.",
+    "theGoldenRule": "Leverage dynamic tunables for operational knobs that may need immediate adjustment during high-traffic events."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/config/Tunables.scala",
+    "inSimpleTerms": "Defines specific typed Tunable keys for the Media Model Proxy, such as client timeouts, retry budgets, and concurrency bounds.",
+    "whyThisExists": "Provides strongly-typed access to dynamic tunables, ensuring that timeout and concurrency values are validated at parse time.",
+    "howItAffectsYourReach": "Governs the time budget allocated for image analysis; if a model exceeds its tunable timeout, the request fails open or falls back.",
+    "theGoldenRule": "Calibrate tunable timeouts to allow deep learning inference to complete while strictly bounding tail latency."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/controllers/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for the Finatra Thrift controller package handling inbound annotation requests.",
+    "whyThisExists": "Compiles Thrift controller classes and links them with Thrift request/response generated bindings.",
+    "howItAffectsYourReach": "Ensures the public API layer of the media annotator compiles cleanly and efficiently.",
+    "theGoldenRule": "Keep controller logic focused on request validation, delegation to service layers, and response mapping."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/controllers/ProxyController.scala",
+    "inSimpleTerms": "Primary Finatra Thrift controller that receives `annotate` RPC calls, validates input parameters, delegates scoring to `ModelsService`, and formats responses.",
+    "whyThisExists": "Acts as the main API endpoint for upstream services (Tweetypie, Media Pipeline, Safety Enforcers) requesting media classification and embeddings.",
+    "howItAffectsYourReach": "The entry point for all media evaluation; parses requested model IDs (NSFW, Gore, Categories, Fingerprints) and returns structured scores that determine visibility.",
+    "theGoldenRule": "Ensure media URLs and metadata passed to the proxy are well-formed so requests process without validation errors."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/exception/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for custom exception definitions used throughout the Media Model Proxy.",
+    "whyThisExists": "Compiles domain-specific exception types and error handling utilities.",
+    "howItAffectsYourReach": "Ensures error classes compile cleanly across service modules.",
+    "theGoldenRule": "Use strongly-typed exceptions to distinguish between transient network retries and fatal client errors."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/exception/Exceptions.scala",
+    "inSimpleTerms": "Defines custom domain exceptions for model timeouts, missing descriptors, BlobStore retrieval failures, and unsupported media types.",
+    "whyThisExists": "Allows the service to categorize errors accurately for metrics, alerts, and client-facing Thrift error responses.",
+    "howItAffectsYourReach": "Distinguishes between transient backend failures (which trigger automatic retries) and permanent media corruption errors.",
+    "theGoldenRule": "Catch and categorize errors cleanly to prevent unhandled exceptions from crashing the request pipeline."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for all computer vision model descriptor implementations and registry classes.",
+    "whyThisExists": "Compiles model-specific input tensor converters, output decoders, and descriptor registry mappings.",
+    "howItAffectsYourReach": "Houses the code that defines how every neural network interprets images and outputs classification scores.",
+    "theGoldenRule": "Maintain high test coverage across all descriptor transformations to prevent silent model scoring bugs."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/CategoryClassificationEmbeddingsModelDescriptor.scala",
+    "inSimpleTerms": "Model descriptor that extracts dense semantic embedding vectors from media to represent visual concepts in high-dimensional topic space.",
+    "whyThisExists": "Translates raw image bytes into DeepBird tensor inputs and converts the output hidden layer into a dense float vector for downstream SimClusters and topic matching.",
+    "howItAffectsYourReach": "Directly feeds visual semantic embeddings into Twitter's interest-based recommendation algorithms, matching your media to users interested in related topics.",
+    "theGoldenRule": "Post visually rich and topic-focused media to generate strong, high-affinity semantic embedding vectors."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/CategoryClassificationModelDescriptor.scala",
+    "inSimpleTerms": "Model descriptor that classifies images into high-level categories (e.g. Sports, Politics, Gaming, Art) with associated confidence probabilities.",
+    "whyThisExists": "Defines feature transformation and output label mapping for multi-class visual topic categorization models on DeepBird.",
+    "howItAffectsYourReach": "Categorizes tweets with media into topical channels and explore feeds; high confidence scores boost relevance in topic-filtered recommendation streams.",
+    "theGoldenRule": "Align visual media clearly with the tweet's subject matter to maximize category classification confidence scores."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/FingerprintingModelDescriptor.scala",
+    "inSimpleTerms": "Model descriptor that computes perceptual hashes and visual fingerprints of images to detect exact and near-duplicate media across Twitter.",
+    "whyThisExists": "Enables instant duplicate detection, copyright enforcement, and rapid propagation of safety moderation decisions across identical media assets.",
+    "howItAffectsYourReach": "If an image's fingerprint matches a previously flagged spam or policy-violating asset, the tweet is instantly downranked or withheld without running full inference.",
+    "theGoldenRule": "Avoid reposting watermarked spam or previously penalized imagery, as perceptual fingerprinting matches near-duplicates instantly."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/FingerprintingV2ModelDescriptor.scala",
+    "inSimpleTerms": "Second-generation visual fingerprinting descriptor featuring enhanced robustness against cropping, rotation, color filters, and compression artifacts.",
+    "whyThisExists": "Improves upon v1 fingerprinting by utilizing deeper neural representations that resist adversarial perturbations and minor media edits.",
+    "howItAffectsYourReach": "Prevents bad actors from bypassing visual moderation filters by applying minor filters or crops to prohibited content.",
+    "theGoldenRule": "Original, high-quality visual content generates unique fingerprints that build positive organic reputation in the recommendation graph."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/HatefulSymbolRecognitionModelDescriptor.scala",
+    "inSimpleTerms": "Model descriptor specialized in identifying hate symbols, extremist iconography, and prohibited emblems in uploaded images.",
+    "whyThisExists": "Provides dedicated computer vision inference for hateful symbol detection, mapping model prediction tensors to specific policy violation flags.",
+    "howItAffectsYourReach": "Any positive detection above threshold triggers severe visibility filtering, immediate removal from For You recommendations, and potential account-level strikes.",
+    "theGoldenRule": "Strictly avoid including any ambiguous or prohibited iconography, as automated hateful symbol classifiers apply zero-tolerance visibility penalties."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/ModelDescriptor.scala",
+    "inSimpleTerms": "Base abstract trait defining the contract for model descriptors, including input tensor preparation, output parsing, model ID mapping, and Decider key binding.",
+    "whyThisExists": "Standardizes how disparate deep learning models interface with the proxy, enforcing consistent error handling, feature extraction, and response formatting.",
+    "howItAffectsYourReach": "The foundational template ensuring all computer vision models are scored, logged, and evaluated consistently across the platform.",
+    "theGoldenRule": "Follow uniform descriptor contracts to ensure new ML models seamlessly integrate into the media annotation pipeline."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/ModelDescriptorRegistry.scala",
+    "inSimpleTerms": "Central registry that maps model string identifiers (e.g., `xx_nsfw`, `violence_and_gore`, `category_classification`) to their corresponding `ModelDescriptor` instances.",
+    "whyThisExists": "Provides fast O(1) lookup of model descriptors by name when incoming Thrift requests specify a list of desired model evaluations.",
+    "howItAffectsYourReach": "Ensures requested model evaluations are dispatched to the exact corresponding model pipelines without overhead or routing errors.",
+    "theGoldenRule": "Register all active model descriptors in the central registry with unique, descriptive model keys."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/ViolenceAndGoreModelDescriptor.scala",
+    "inSimpleTerms": "Model descriptor that scores images for graphic violence, gore, physical trauma, and weapon presence.",
+    "whyThisExists": "Provides dedicated feature parsing and threshold evaluation for DeepBird violence detection models to protect users from graphic content.",
+    "howItAffectsYourReach": "Elevated violence/gore scores add sensitive media interstitial warnings, disable autoplay, and exclude the tweet from general Out-of-Network recommendations.",
+    "theGoldenRule": "Mark sensitive or graphic content appropriately using media tags to avoid algorithmic penalties or shadow-suppression."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/model_descriptors/XXNsfwModelDescriptor.scala",
+    "inSimpleTerms": "Model descriptor that processes adult content (NSFW) classification, detecting nudity, sexually explicit imagery, and suggestive content.",
+    "whyThisExists": "Converts raw image bytes into feature representations for Twitter's XX NSFW neural network and maps output probabilities to fine-grained adult content tags.",
+    "howItAffectsYourReach": "High NSFW confidence scores automatically apply adult content interstitials, restrict distribution to consenting adult accounts, and disqualify the tweet from the For You explore tab.",
+    "theGoldenRule": "Accurately self-label adult content to preserve account standing and prevent system-wide visibility downranking."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for Google Guice dependency injection modules configuring service components, clients, and filters.",
+    "whyThisExists": "Compiles all dependency injection bindings for Finagle clients, BlobStore services, Scribe loggers, and feature modules.",
+    "howItAffectsYourReach": "Ensures DI configuration compiles cleanly with correct lifecycle management across the service.",
+    "theGoldenRule": "Structure Guice modules with clear, explicit provider methods to simplify test overrides and dependency injection."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/BlobStoreModule.scala",
+    "inSimpleTerms": "Guice module providing configured, connection-pooled Finagle HTTP/Thrift clients for downloading media assets from Twitter's internal BlobStore.",
+    "whyThisExists": "Manages connection lifecycles, read timeouts, backoff retries, and mutual TLS authentication when fetching media binaries from distributed BlobStore storage clusters.",
+    "howItAffectsYourReach": "Ensures uploaded images are fetched with ultra-low latency; retrieval timeouts would delay or prevent media classification.",
+    "theGoldenRule": "Configure resilient connection pooling and backoff policies for storage cluster clients to withstand transient network blips."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/ConfigModule.scala",
+    "inSimpleTerms": "Guice module that binds environment configuration, service identifiers, and port flags into the dependency injection graph.",
+    "whyThisExists": "Provides centralized injection of global configuration objects across controllers and services.",
+    "howItAffectsYourReach": "Ensures all service components operate with consistent environment and data center configurations.",
+    "theGoldenRule": "Inject immutable configuration classes through dedicated Guice provider modules."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/FeaturesModule.scala",
+    "inSimpleTerms": "Guice module that initializes Decider feature flag clients and binds the `Features` service helper.",
+    "whyThisExists": "Wires Twitter's Decider framework into the application, enabling dynamic feature gating across all model evaluation paths.",
+    "howItAffectsYourReach": "Governs the active rollout percentages of all safety and categorization models across production clusters.",
+    "theGoldenRule": "Ensure Decider clients are properly initialized with local fallback bases in test and development environments."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/LoadSheddingFilterModule.scala",
+    "inSimpleTerms": "Guice module configuring Finagle load-shedding filters to reject or degrade non-critical requests when CPU or queue thresholds are exceeded.",
+    "whyThisExists": "Protects the service from catastrophic failure during massive traffic spikes by dropping low-priority requests while keeping core safety pipelines alive.",
+    "howItAffectsYourReach": "During severe server overload, load shedding prioritizes safety moderation (NSFW/violence) over optional embeddings and category generation.",
+    "theGoldenRule": "Design load-shedding filters with clear tier-based priority shedding so critical safety functions remain operational under stress."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/MediaModelProxyModule.scala",
+    "inSimpleTerms": "Core Guice module that binds model descriptors, registry singletons, and controller routes for the Media Model Proxy.",
+    "whyThisExists": "Assembles the core domain dependencies of the proxy, registering all active model descriptors into the central registry.",
+    "howItAffectsYourReach": "Ensures all visual understanding models are properly instantiated and available for incoming Thrift annotation requests.",
+    "theGoldenRule": "Register all new model descriptors in the main module to make them available to the service registry."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/ModelsModule.scala",
+    "inSimpleTerms": "Guice module that binds DeepBird v2 model clients, switching proxies, and fallback clients for each registered model type.",
+    "whyThisExists": "Configures Finagle Thrift clients connected to DeepBird GPU/CPU clusters, injecting circuit breakers, retries, and Decider switches.",
+    "howItAffectsYourReach": "Manages the execution pipelines that score images for topic modeling and safety classification.",
+    "theGoldenRule": "Use switching model clients to enable safe canary rollouts and A/B testing of new deep learning models."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/ScribeLoggerModule.scala",
+    "inSimpleTerms": "Guice module configuring Twitter's Scribe distributed logging client for asynchronous audit trail publishing.",
+    "whyThisExists": "Provides non-blocking logging infrastructure to record model inference results, latencies, and input hashes for offline analysis.",
+    "howItAffectsYourReach": "Logs media classification decisions to data pipelines, feeding training data lakes that continuously retrain recommendation and safety models.",
+    "theGoldenRule": "Use asynchronous, buffered Scribe clients to prevent audit logging from adding latency to real-time inference."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/StatsReceiverModule.scala",
+    "inSimpleTerms": "Guice module that binds Twitter's Finagle `StatsReceiver` for exporting real-time metrics, counters, and latency gauges.",
+    "whyThisExists": "Exposes critical observability metrics (QPS, p50/p99 latency, error rates, model score distributions) to Grafana and alerting systems.",
+    "howItAffectsYourReach": "Enables automated alerts that trigger on-call engineering interventions if media classification error rates spike.",
+    "theGoldenRule": "Instrument all model inference and network operations with fine-grained Finagle metrics for comprehensive observability."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/ThriftDiffyProxyModule.scala",
+    "inSimpleTerms": "Guice module integrating Twitter's Diffy tool for shadow traffic comparison and regression testing across model versions.",
+    "whyThisExists": "Allows new versions of the Media Model Proxy to run in parallel with production, comparing response diffs on real traffic without affecting users.",
+    "howItAffectsYourReach": "Guarantees that algorithmic and model updates produce intended output distributions before going live.",
+    "theGoldenRule": "Leverage Diffy shadow-proxying to validate behavioral parity when refactoring model descriptors or upgrading Thrift schemas."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/modules/package.scala",
+    "inSimpleTerms": "Scala package object defining shared type aliases, constants, and implicit conversions across the modules package.",
+    "whyThisExists": "Reduces boilerplate by providing package-wide utility methods and standard type definitions.",
+    "howItAffectsYourReach": "Maintains clean, consistent code structure across dependency injection definitions.",
+    "theGoldenRule": "Centralize package-level constants and utility aliases in package objects to avoid duplicated boilerplate."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/services/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for the core business logic services (ModelsService and BlobStoreService).",
+    "whyThisExists": "Compiles service layer implementations that coordinate media fetching and model scoring.",
+    "howItAffectsYourReach": "Houses the business logic responsible for media analysis and safety scoring.",
+    "theGoldenRule": "Keep business logic modularized and decoupled from specific transport controllers."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/services/BlobStoreService.scala",
+    "inSimpleTerms": "Service layer handling asynchronous fetching of raw media binary assets from Twitter's internal BlobStore.",
+    "whyThisExists": "Encapsulates media retrieval, error handling, content-type validation, and byte buffer management when downloading user-uploaded images.",
+    "howItAffectsYourReach": "Fast, reliable image downloads ensure that media understanding algorithms have the raw bytes needed to score posts in real time.",
+    "theGoldenRule": "Implement aggressive timeout and connection reuse policies when retrieving media assets from distributed blob storage."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/services/ModelsService.scala",
+    "inSimpleTerms": "Core orchestration service that concurrently dispatches media evaluation requests across multiple machine learning models.",
+    "whyThisExists": "Coordinates parallel model evaluation: receives a media request, queries BlobStore, determines active models via Deciders, fans out inference calls across DeepBird, collects results, logs to Scribe, and returns combined scores.",
+    "howItAffectsYourReach": "The central nexus of media understanding; simultaneously computes NSFW, Gore, Category, and Embedding scores that dictate whether a tweet is amplified, categorized, or suppressed.",
+    "theGoldenRule": "Use non-blocking asynchronous concurrency (e.g. `Future.collect`) to execute multiple deep learning evaluations in parallel within strict latency SLAs."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/util/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for utility classes, including Scribe logging and helper formatters.",
+    "whyThisExists": "Compiles logging and auditing utility libraries used throughout the proxy.",
+    "howItAffectsYourReach": "Ensures utility libraries compile cleanly with minimal dependency footprints.",
+    "theGoldenRule": "Keep utility libraries pure and free of heavy domain dependencies."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/util/ScribeLogger.scala",
+    "inSimpleTerms": "Utility class that formats model evaluation inputs, prediction outputs, and execution metadata into Thrift structs and publishes them to Scribe.",
+    "whyThisExists": "Provides structured, asynchronous audit logging of all media classification events for offline analytics, safety auditing, and model training.",
+    "howItAffectsYourReach": "Persists media classification records to long-term storage, enabling continuous evaluation of model fairness and accuracy over time.",
+    "theGoldenRule": "Buffer and serialize Scribe records asynchronously to eliminate IO overhead on the critical inference path."
+  },
+  {
+    "path": "media-model-proxy/src/main/scala/com/twitter/media_understanding/model_proxy/util/Scriber.scala",
+    "inSimpleTerms": "Scala trait defining the interface for publishing audit log messages to Scribe log categories.",
+    "whyThisExists": "Decouples log generation logic from the underlying Scribe transport, facilitating mock implementations in unit tests.",
+    "howItAffectsYourReach": "Ensures reliable, mockable telemetry publishing across the media proxy pipeline.",
+    "theGoldenRule": "Abstract logging sinks behind clean interfaces to enable lightweight, mockable unit testing."
+  },
+  {
+    "path": "media-model-proxy/src/main/thrift/BUILD",
+    "inSimpleTerms": "Bazel build rule for compiling Apache Thrift IDL definition files into Scala and Java RPC stubs.",
+    "whyThisExists": "Automates the generation of strongly-typed Thrift client and server code for the `cortex_media_annotator` service.",
+    "howItAffectsYourReach": "Ensures RPC data structures remain backward-compatible across all internal services communicating with the media proxy.",
+    "theGoldenRule": "Maintain strict backward compatibility in Thrift IDL schemas by never changing field IDs or types."
+  },
+  {
+    "path": "media-model-proxy/src/main/thrift/com/twitter/cortex_media_annotator/annotate.thrift",
+    "inSimpleTerms": "Apache Thrift IDL defining the public API for the media annotator, including `MediaAnnotationRequest`, `MediaAnnotationResponse`, model categories, and feature structs.",
+    "whyThisExists": "Serves as the formal RPC interface contract between upstream tweet ingestion services and the Media Model Proxy.",
+    "howItAffectsYourReach": "Defines the exact schema of safety flags (NSFW, gore, hate symbols) and topic categories returned to Tweetypie and feed ranking pipelines.",
+    "theGoldenRule": "Review Thrift schema definitions to understand the full range of visual metadata dimensions evaluated on user media."
+  },
+  {
+    "path": "media-model-proxy/src/main/thrift/com/twitter/cortex_media_annotator/annotate_scribe.thrift",
+    "inSimpleTerms": "Apache Thrift IDL defining the structured audit logging schema for Scribe log events produced during media annotation.",
+    "whyThisExists": "Defines the schema for offline data warehouse logging, capturing media IDs, requested model IDs, execution latencies, and prediction tensors.",
+    "howItAffectsYourReach": "Powers offline model retraining datasets and algorithmic auditing pipelines.",
+    "theGoldenRule": "Include comprehensive metadata in Scribe logging schemas to support robust offline model evaluation."
+  },
+  {
+    "path": "media-model-proxy/src/test/resources/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for test resource files, bundling test Deciders and mock configs into the test classpath.",
+    "whyThisExists": "Packages test fixtures into the Bazel test sandbox for hermetic unit and feature tests.",
+    "howItAffectsYourReach": "Ensures unit tests run reliably in CI environments without external filesystem dependencies.",
+    "theGoldenRule": "Declare test resource targets explicitly in Bazel to maintain test hermeticity."
+  },
+  {
+    "path": "media-model-proxy/src/test/resources/test_decider_base.yml",
+    "inSimpleTerms": "YAML decider configuration used during unit and feature tests, setting all model flags to predictable test percentages.",
+    "whyThisExists": "Provides a controlled feature flag environment for unit tests, ensuring tests run deterministically without relying on live production Decider servers.",
+    "howItAffectsYourReach": "Validates that model gating logic operates predictably across both 0% and 100% flag settings.",
+    "theGoldenRule": "Use deterministic test decider configurations to verify both enabled and disabled code paths in test suites."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/app/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for server startup and feature-level integration tests.",
+    "whyThisExists": "Compiles server-level test suites that verify application bootstrap and end-to-end request processing.",
+    "howItAffectsYourReach": "Prevents startup crashes and routing regressions from entering production deployments.",
+    "theGoldenRule": "Include startup smoke tests to catch dependency injection and configuration errors before deployment."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/app/FeatureTest.scala",
+    "inSimpleTerms": "Comprehensive Finatra feature test that verifies end-to-end Thrift requests against an embedded test server with mocked backends.",
+    "whyThisExists": "Tests full request/response flows including routing, controller validation, Decider evaluation, and response mapping.",
+    "howItAffectsYourReach": "Guarantees that the proxy correctly processes media annotation requests and returns expected safety scores across diverse test scenarios.",
+    "theGoldenRule": "Write comprehensive feature tests for all public RPC endpoints using embedded Finatra test servers."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/app/StartupTest.scala",
+    "inSimpleTerms": "Fast smoke test that boots the Media Model Proxy Finatra server in test mode and asserts clean startup without dependency injection errors.",
+    "whyThisExists": "Catches missing Guice bindings, circular dependencies, or invalid configuration files during CI builds before deployment.",
+    "howItAffectsYourReach": "Ensures server health and operational stability across continuous deployment cycles.",
+    "theGoldenRule": "Always run startup tests to catch Guice dependency injection errors before shipping."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/clients/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for model client unit test specifications.",
+    "whyThisExists": "Compiles unit tests covering DeepBirdClient, SwitchingModelClient, and DummyEmbeddingsClient.",
+    "howItAffectsYourReach": "Ensures client layer tests compile and execute cleanly in CI.",
+    "theGoldenRule": "Maintain dedicated test targets for all client communication components."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/clients/DeepbirdClientSpec.scala",
+    "inSimpleTerms": "Unit test suite for `DeepbirdClient` verifying Thrift request construction, tensor serialization, and error handling when communicating with DeepBird v2.",
+    "whyThisExists": "Validates that the DeepBird client correctly packs image bytes into prediction requests and properly unpacks returned prediction tensors.",
+    "howItAffectsYourReach": "Guarantees that deep learning predictions are accurately extracted and parsed without loss of precision.",
+    "theGoldenRule": "Test client tensor serialization against diverse mock responses to verify boundary condition handling."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/clients/DummyEmbeddingsClientSpec.scala",
+    "inSimpleTerms": "Unit test suite verifying the behavior of `DummyEmbeddingsClient` under various test configurations.",
+    "whyThisExists": "Ensures the mock/fallback client returns correctly formatted embedding vectors of the expected dimensionality.",
+    "howItAffectsYourReach": "Verifies that fallback embeddings adhere to dimensional and structural contracts during disaster recovery scenarios.",
+    "theGoldenRule": "Verify that dummy fallback clients produce vectors matching production embedding dimensionality."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/clients/SwitchingModelClientSpec.scala",
+    "inSimpleTerms": "Unit test suite testing the dynamic routing and canary switching logic in `SwitchingModelClient`.",
+    "whyThisExists": "Verifies that traffic correctly shifts between primary, canary, and fallback clients based on Decider percentage changes.",
+    "howItAffectsYourReach": "Ensures that canary rollouts and dark-traffic experiments route traffic accurately without leaking unvalidated predictions to users.",
+    "theGoldenRule": "Test all Decider boundary conditions (0%, 50%, 100%) to verify smooth traffic switching across model versions."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/config/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for configuration and feature flag unit tests.",
+    "whyThisExists": "Compiles test specifications for Decider and Features parsing.",
+    "howItAffectsYourReach": "Ensures configuration test suites compile cleanly.",
+    "theGoldenRule": "Maintain high test coverage for configuration and feature flag evaluation logic."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/config/FeaturesSpec.scala",
+    "inSimpleTerms": "Unit test suite validating that `Features` correctly queries Decider flags and resolves model activation states.",
+    "whyThisExists": "Verifies that model enablement checks, dark traffic switches, and load shedding flags are evaluated accurately.",
+    "howItAffectsYourReach": "Prevents logic bugs in feature flag evaluation that could inadvertently disable safety or categorization models.",
+    "theGoldenRule": "Verify feature evaluation logic against both active and inactive decider state fixtures."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/model_descriptors/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for all model descriptor unit test specifications.",
+    "whyThisExists": "Compiles unit tests covering all individual model descriptors (NSFW, Gore, Categories, Fingerprints, Hate Symbols).",
+    "howItAffectsYourReach": "Ensures all model descriptor test targets build and run reliably in CI.",
+    "theGoldenRule": "Keep model descriptor test suites modular and parallelizable in Bazel."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/model_descriptors/CategoryClassificationEmbeddingsModelDescriptorSpec.scala",
+    "inSimpleTerms": "Unit test suite validating that category classification embeddings are correctly extracted, formatted into dense float vectors, and mapped to Thrift response structs.",
+    "whyThisExists": "Ensures semantic embedding vectors are accurately extracted from deep neural network hidden layers without tensor slicing errors.",
+    "howItAffectsYourReach": "Guarantees that downstream SimClusters and topic recommendation systems receive accurate high-dimensional visual representations.",
+    "theGoldenRule": "Verify embedding vector dimensions and float precision in unit tests to prevent downstream vector index mismatches."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/model_descriptors/CategoryClassificationModelDescriptorSpec.scala",
+    "inSimpleTerms": "Unit test suite verifying that multi-class category probabilities and top-K predicted labels are correctly parsed from DeepBird tensors.",
+    "whyThisExists": "Tests classification label mapping, probability score thresholding, and category ranking logic.",
+    "howItAffectsYourReach": "Ensures that topic categories assigned to media tweets reflect true model confidence scores.",
+    "theGoldenRule": "Validate label index mapping against model dictionary files to prevent misclassified topic assignments."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/model_descriptors/FingerprintingModelDescriptorSpec.scala",
+    "inSimpleTerms": "Unit test suite validating that visual fingerprinting hashes are correctly computed and serialized into Thrift response fields.",
+    "whyThisExists": "Ensures perceptual hash algorithms produce deterministic, reproducible binary signatures from image inputs.",
+    "howItAffectsYourReach": "Verifies that near-duplicate and spam detection hashes are generated accurately for media tracking.",
+    "theGoldenRule": "Test fingerprinting outputs against known reference images to ensure hash consistency across releases."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/model_descriptors/FingerprintingV2ModelDescriptorSpec.scala",
+    "inSimpleTerms": "Unit test suite for the second-generation fingerprinting descriptor, verifying enhanced hash stability across image transforms.",
+    "whyThisExists": "Tests v2 fingerprint generation against rotated, cropped, and resized image fixtures to confirm robustness.",
+    "howItAffectsYourReach": "Guarantees that modern perceptual hashing algorithms accurately identify media duplicates regardless of light editing.",
+    "theGoldenRule": "Validate fingerprint stability against common image transformations in automated test suites."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/model_descriptors/HatefulSymbolRecognitionModelDescriptorSpec.scala",
+    "inSimpleTerms": "Unit test suite testing tensor parsing and threshold gating for hate symbol recognition models.",
+    "whyThisExists": "Verifies that prohibited iconography detections correctly map to safety moderation flags in Thrift responses.",
+    "howItAffectsYourReach": "Ensures that hate symbol detection logic functions accurately without false negative safety leaks.",
+    "theGoldenRule": "Maintain comprehensive unit test assertions around sensitivity thresholds for hate symbol classification."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/model_descriptors/ViolenceAndGoreModelDescriptorSpec.scala",
+    "inSimpleTerms": "Unit test suite verifying that graphic violence and gore probability scores are correctly extracted, classified into severity tiers, and mapped to Thrift structs.",
+    "whyThisExists": "Tests fine-grained classification across violence categories (e.g. gore, physical violence, weapons) and verifies threshold boundaries.",
+    "howItAffectsYourReach": "Guarantees that sensitive content classification thresholds are applied accurately before posts reach the feed.",
+    "theGoldenRule": "Test multi-tier violence thresholds to ensure accurate categorization between mild and severe content."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/model_descriptors/XXNsfwModelDescriptorSpec.scala",
+    "inSimpleTerms": "Unit test suite testing the adult content (NSFW) model descriptor across various prediction probability outputs.",
+    "whyThisExists": "Verifies that adult content probability tensors are correctly parsed into nudity, suggestive, and explicit sub-category scores.",
+    "howItAffectsYourReach": "Ensures adult content classification logic correctly triggers NSFW interstitials and explore-tab exclusion rules.",
+    "theGoldenRule": "Verify NSFW threshold calibrations against edge-case probability scores to prevent misclassification."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/modules/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for test dependency injection modules and mock provider classes.",
+    "whyThisExists": "Compiles test Guice modules used across unit and integration test suites.",
+    "howItAffectsYourReach": "Ensures test DI modules compile cleanly with proper mock client bindings.",
+    "theGoldenRule": "Use dedicated test Guice modules to inject mocks cleanly in test environments."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/modules/TestClientModules.scala",
+    "inSimpleTerms": "Test Guice modules providing mocked implementations of DeepBirdClient, BlobStoreService, and ScribeLogger for hermetic unit testing.",
+    "whyThisExists": "Enables unit and integration tests to run entirely in-memory without making network calls to external storage or ML clusters.",
+    "howItAffectsYourReach": "Ensures test suites run quickly and deterministically in CI pipelines.",
+    "theGoldenRule": "Provide comprehensive mock module implementations for all external RPC dependencies."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/services/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for service layer unit test specifications.",
+    "whyThisExists": "Compiles unit tests for ModelsService and BlobStoreService.",
+    "howItAffectsYourReach": "Ensures service layer unit tests compile and run reliably in CI.",
+    "theGoldenRule": "Maintain comprehensive unit tests covering all service orchestration paths."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/services/BlobStoreServiceSpec.scala",
+    "inSimpleTerms": "Unit test suite verifying that `BlobStoreService` correctly handles HTTP/Thrift responses, non-200 status codes, and image byte buffer conversions.",
+    "whyThisExists": "Tests media download error handling, timeout handling, and corrupt payload recovery.",
+    "howItAffectsYourReach": "Guarantees robust error handling when media downloads fail or experience network latency.",
+    "theGoldenRule": "Test blob storage retrieval across various network failure modes to ensure graceful degradation."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/services/ModelsServiceSpec.scala",
+    "inSimpleTerms": "Comprehensive unit test suite for `ModelsService` testing parallel model dispatch, Decider filtering, Scribe logging, and exception aggregation.",
+    "whyThisExists": "Verifies the core business logic of the proxy: concurrent model execution, partial failure handling, and response consolidation.",
+    "howItAffectsYourReach": "Ensures that if one non-critical model fails or times out, the service still returns valid results for the remaining models rather than failing the entire request.",
+    "theGoldenRule": "Verify partial failure resilience so that a single model timeout does not drop the entire media classification response."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/util/BUILD.bazel",
+    "inSimpleTerms": "Bazel build rule for utility unit test specifications.",
+    "whyThisExists": "Compiles unit tests for ScribeLogger and utility helpers.",
+    "howItAffectsYourReach": "Ensures utility test suites compile cleanly.",
+    "theGoldenRule": "Test utility components in isolation with dedicated Bazel test targets."
+  },
+  {
+    "path": "media-model-proxy/src/test/scala/com/twitter/media_understanding/model_proxy/util/ScribeLoggerSpec.scala",
+    "inSimpleTerms": "Unit test suite verifying that `ScribeLogger` constructs valid Thrift scribe messages and publishes them without throwing exceptions.",
+    "whyThisExists": "Validates that audit logging logic never propagates exceptions to the main request pipeline, even if the logging backend is unavailable.",
+    "howItAffectsYourReach": "Ensures audit logging failures never disrupt real-time media scoring or tweet publishing.",
+    "theGoldenRule": "Verify that audit logging operations fail silently and safely without blocking critical-path business logic."
+  }
+]

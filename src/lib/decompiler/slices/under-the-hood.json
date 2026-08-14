@@ -1,0 +1,205 @@
+[
+  {
+    "path": "under-the-hood/thrift/uth_serving.thrift",
+    "inSimpleTerms": "This file defines the Thrift data structures for the Under the Hood transparency engine. It models daily post counts, carried and removed safety labels, account-level moderation status, and statistical rate aggregations across creator cohorts.",
+    "whyThisExists": "X needed a compact, strongly typed schema to serialize offline Scalding map-reduce aggregates directly into Manhattan distributed key-value stores for low-latency retrieval by Strato GraphQL columns.",
+    "howItAffectsYourReach": "Does not rank posts directly, but defines the underlying metrics (carried vs removed post safety labels and active account restriction days) that determine whether an account's overall visibility is penalized or suppressed across recommendations.",
+    "theGoldenRule": "Keep your label counts at zero: posts with 'carried' labels persist in historical aggregates and signal algorithmic classifiers to treat subsequent posts with higher risk multipliers."
+  },
+  {
+    "path": "under-the-hood/strato/graphql/under_the_hood.thrift",
+    "inSimpleTerms": "This file specifies the GraphQL data contract used by web and mobile client applications to query an account's Under the Hood transparency report. It packages report metadata, qualification eligibility flags, and raw JSON payload strings.",
+    "whyThisExists": "Client frontends require an explicit GraphQL schema boundary to verify viewer eligibility (account age and posting volume) before downloading and parsing heavy historical moderation telemetry.",
+    "howItAffectsYourReach": "Serves as the gateway for creators to inspect platform transparency verdicts and learn whether their posts or profiles are suppressed from non-follower recommendations.",
+    "theGoldenRule": "Regularly verify your report eligibility checks; passing the minimum activity threshold ensures you have full visibility into automated safety enforcements affecting your account."
+  },
+  {
+    "path": "under-the-hood/strato/lib/underTheHoodLabels.strato",
+    "inSimpleTerms": "This library acts as the master dictionary for all safety enforcement labels across X. It maps internal moderation codes (such as NSFW, FOSNR hateful conduct, spam, and abusive speech) to user-facing descriptions and exact distribution restrictions.",
+    "whyThisExists": "Platform moderation enforcements originate from multiple machine learning services and manual queues with varying naming conventions; this module standardizes and normalizes them into human-readable transparency explanations.",
+    "howItAffectsYourReach": "Identifies the exact distribution kill switches applied to content, such as complete removal from Home timeline recommendations, exclusion from search results, or restriction exclusively to the author's profile tab.",
+    "theGoldenRule": "Understand FOSNR ('Freedom of Speech, Not Reach'): when a post triggers FOSNR labels (harassment, violent speech, civic integrity), your organic out-of-network distribution drops to absolute zero."
+  },
+  {
+    "path": "under-the-hood/strato/lib/sharedConfig.strato",
+    "inSimpleTerms": "This file centralizes shared operational configuration, team contact routing (Birdwatch/Transparency), and Manhattan database connection endpoints for the Under the Hood service cluster.",
+    "whyThisExists": "Centralizing storage paths, application IDs, and dataset identifiers prevents configuration drift across read-only Strato column resolvers serving millions of user transparency queries.",
+    "howItAffectsYourReach": "Guarantees reliable high-availability database connections so that user safety statuses and transparency metrics resolve with zero downtime.",
+    "theGoldenRule": "Operational resilience ensures moderation transparency metrics are continuously refreshed and accurately reflect resolved safety appeals."
+  },
+  {
+    "path": "under-the-hood/strato/lib/params.strato",
+    "inSimpleTerms": "This module integrates dynamic feature switches for the Under the Hood transparency system. It controls whether the report is accessible to all public users or restricted to specific internal reviewer roles.",
+    "whyThisExists": "Allows engineering and compliance teams to safely roll out, A/B test, or emergency-kill transparency report generation without deploying code across production services.",
+    "howItAffectsYourReach": "Controls feature availability at runtime without impacting timeline generation or candidate ranking pipelines.",
+    "theGoldenRule": "Transparency feature gating ensures compliance reports are served only when underlying batch pipelines have validated data consistency."
+  },
+  {
+    "path": "under-the-hood/strato/columns/underTheHoodReport.strato",
+    "inSimpleTerms": "This is the primary root Strato virtual column for transparency reports. It authenticates the viewing user, verifies feature switch permissions, and delegates execution to the per-user data fetcher.",
+    "whyThisExists": "Enforces strict authorization boundaries so accounts can only access their own private moderation records and cannot inspect competitor enforcement data.",
+    "howItAffectsYourReach": "Ensures that moderation and restriction verdicts are strictly isolated to the authenticated profile holder.",
+    "theGoldenRule": "Only the authentic profile owner can query their enforcement history; transparency data is never leaked to third parties or competing creators."
+  },
+  {
+    "path": "under-the-hood/strato/columns/underTheHoodReport.User.strato",
+    "inSimpleTerms": "This file contains the core business logic for generating an account's monthly transparency report. It verifies account age (1+ year) and post activity (10+ posts), pulls monthly moderation tallies from Manhattan, and computes label percentages.",
+    "whyThisExists": "Generates complete transparency breakdowns on-the-fly while enforcing safety rules: suspended accounts are excluded, and incomplete calendar observation windows fall back to previous fully-settled months.",
+    "howItAffectsYourReach": "Exposes whether an account's posts were suppressed from For You recommendations, hidden behind NSFW warning interstitials, or limited due to account-level penalties.",
+    "theGoldenRule": "Maintain high posting consistency and zero policy violations; hitting the 10+ monthly post requirement lets you monitor exactly what fraction of your content was flagged by automated filters."
+  },
+  {
+    "path": "under-the-hood/strato/columns/mh/userMonthAggregates.strato",
+    "inSimpleTerms": "This file establishes a read-only Strato interface to the Manhattan distributed database storing monthly user moderation aggregates. It decodes Thrift-serialized records keyed by user ID and year-month bucket.",
+    "whyThisExists": "Decouples heavy offline batch computation in Hadoop/Scalding from real-time API reads, providing sub-10ms key-value queries for profile transparency dashboards.",
+    "howItAffectsYourReach": "Serves the historical record of all enforcement actions applied to an account, which feeds downstream reputation models.",
+    "theGoldenRule": "Manhattan records capture persistent enforcement history; appealing false positives promptly ensures corrective updates propagate into settled monthly datasets."
+  },
+  {
+    "path": "under-the-hood/strato/columns/mh/referenceMonthAggregates.strato",
+    "inSimpleTerms": "This file defines the Manhattan database interface for reference cohort aggregates. It stores platform-wide moderation percentiles categorized by follower count tiers (under 1k, 1k-10k, 10k-100k, 100k+).",
+    "whyThisExists": "Provides creators with statistical baseline comparisons so they can understand whether their moderation rate is standard or anomalous relative to peers of similar audience size.",
+    "howItAffectsYourReach": "Gives creators clear benchmark visibility into platform-wide enforcement distributions across different creator follower tiers.",
+    "theGoldenRule": "Benchmark your account against your follower cohort: maintaining lower violation percentiles than your peer group protects your reputation across algorithmic candidate sourcing."
+  },
+  {
+    "path": "under-the-hood/strato/columns/graphql/userUnderTheHoodReport.GraphQlQuery.strato",
+    "inSimpleTerms": "This file exposes the Under the Hood transparency report as an external GraphQL query endpoint accessible by public web and mobile clients.",
+    "whyThisExists": "Maps internal Strato column operations into standard public GraphQL query views consumed by the official X application frontend.",
+    "howItAffectsYourReach": "Allows client apps to display real-time transparency status cards directly within user account settings.",
+    "theGoldenRule": "Leverage native account transparency settings to stay informed on automated safety verdicts before minor infractions escalate into account-level restrictions."
+  },
+  {
+    "path": "under-the-hood/strato/columns/featureSwitches.strato",
+    "inSimpleTerms": "This file binds the Under the Hood Strato columns to the centralized feature switch directory, allowing dynamic runtime configuration adjustments across staging and production.",
+    "whyThisExists": "Decouples feature flags from column code so system administrators and compliance officers can adjust rollouts across user cohorts instantly without restarting servers.",
+    "howItAffectsYourReach": "Guarantees zero-downtime configuration rollouts for platform transparency features.",
+    "theGoldenRule": "Controlled rollouts protect system reliability while transparency features scale to hundreds of millions of active users."
+  },
+  {
+    "path": "under-the-hood/scalding/UnderTheHoodCommon.scala",
+    "inSimpleTerms": "This utility library provides shared datetime math, Snowflake ID timestamp extraction, follower tier classification, reducer tuning, and user filtering helpers for all Scalding batch jobs.",
+    "whyThisExists": "Batch analytics require consistent UTC calendar boundaries, day-offset calculations, and reducer optimization across distributed Hadoop MapReduce pipelines.",
+    "howItAffectsYourReach": "Governs how posts are bucketed into calendar observation windows, ensuring every single post and safety label is accurately captured in monthly metrics.",
+    "theGoldenRule": "Post timestamps derived from Snowflake IDs are immutable; timing your content cleanly within calendar windows ensures accurate metric tracking across monthly evaluation cycles."
+  },
+  {
+    "path": "under-the-hood/scalding/UnderTheHoodDates.scala",
+    "inSimpleTerms": "This file parses date ranges and monthly execution windows for ad-hoc and production Scalding MapReduce jobs in the Under the Hood data pipeline.",
+    "whyThisExists": "Enforces strict YYYY-MM and UTC day boundaries so that batch processing jobs calculate metrics across complete, non-overlapping calendar intervals.",
+    "howItAffectsYourReach": "Ensures that moderation actions occurring on specific calendar days are credited or penalized within their exact monthly evaluation window.",
+    "theGoldenRule": "Strict temporal bounding prevents stale moderation actions from spilling into future monthly reporting and ranking periods."
+  },
+  {
+    "path": "under-the-hood/scalding/GizmoduckSafetyFlags.scala",
+    "inSimpleTerms": "This file parses user modification logs from Gizmoduck to detect changes in critical safety flags, specifically tracking when the NsfwAdmin account-level moderation flag is applied or removed.",
+    "whyThisExists": "Account-level safety flags are often stored as user profile fields rather than distinct safety labels; this module transforms profile field diffs into structured event streams.",
+    "howItAffectsYourReach": "Receiving an NsfwAdmin flag immediately suppresses all of an account's posts behind sensitive content warnings and hides them entirely from recommendations to non-followers and logged-out users.",
+    "theGoldenRule": "Never post untagged explicit media: triggering an NsfwAdmin account label will wipe out non-follower reach across your entire catalog of posts."
+  },
+  {
+    "path": "under-the-hood/scalding/GizmoduckLabelDiff.scala",
+    "inSimpleTerms": "This utility parses JSON-serialized label state transitions from Gizmoduck user modification audit logs, extracting exact label application timestamps and expiration deadlines.",
+    "whyThisExists": "User labels are stored as JSON blobs in audit logs; decoding these blobs enables downstream batch jobs to track precisely when restrictions were active or expired.",
+    "howItAffectsYourReach": "Determines the active duration of account-level restrictions (such as ReadOnly, SpamHighRecall, or Impersonation), directly controlling how long an account suffers algorithmic penalties.",
+    "theGoldenRule": "Temporary account labels automatically expire once their TTL passes; avoiding repeat offenses ensures algorithmic penalties lift immediately upon expiration."
+  },
+  {
+    "path": "under-the-hood/scalding/AccountLabelEvents.scala",
+    "inSimpleTerms": "This file builds continuous timelines of account safety label states by combining baseline snapshot records with real-time modification event deltas from Gizmoduck.",
+    "whyThisExists": "Snapshots provide point-in-time state while event logs capture real-time mutations; combining them creates an uninterrupted, exact daily ledger of account penalties.",
+    "howItAffectsYourReach": "Accurately calculates the exact number of active penalty days in a month, which signals recommendation engines to suppress low-reputation accounts.",
+    "theGoldenRule": "Even a few days of active account-level labels degrade monthly distribution metrics; resolve security challenges and policy appeals immediately."
+  },
+  {
+    "path": "under-the-hood/scalding/UthDailyPostsJob.scala",
+    "inSimpleTerms": "This production daily batch job processes all raw tweets, retweets, and safety label events to count eligible posts and calculate daily carried versus removed safety labels per author.",
+    "whyThisExists": "Aggregating millions of daily post safety events into daily Parquet datasets enables fast monthly rollups without repeatedly scanning raw tweet source logs.",
+    "howItAffectsYourReach": "Tracks whether safety labels applied to your posts were 'carried' (upheld throughout the observation horizon) or 'removed' (successfully appealed or overturned), which directly feeds reach eligibility.",
+    "theGoldenRule": "If a post is flagged incorrectly, submit an appeal immediately: overturned labels convert from 'carried' to 'removed', clearing your record in monthly transparency aggregations."
+  },
+  {
+    "path": "under-the-hood/scalding/UthDailyPostsBackfillJob.scala",
+    "inSimpleTerms": "This Scalding batch job backfills daily eligible post counts and safety label states across multi-day historical date ranges using partitioned MapReduce pipelines.",
+    "whyThisExists": "Required when historical datasets must be reprocessed due to pipeline updates, schema migrations, or retroactive label corrections without disrupting daily scheduled jobs.",
+    "howItAffectsYourReach": "Guarantees that historical reach and moderation records remain accurate even after retroactive system adjustments or data recovery operations.",
+    "theGoldenRule": "Backfill pipelines ensure historical enforcement records reflect platform corrections accurately, preventing lingering phantom penalties."
+  },
+  {
+    "path": "under-the-hood/scalding/UthDailyAccountLabelsJob.scala",
+    "inSimpleTerms": "This daily batch job reconstructs which account-level safety labels (e.g. ReadOnly, Spam, NSFW, Impersonation) were active on each calendar day for every user across X.",
+    "whyThisExists": "Determines daily account penalty presence by replaying modification streams over baseline snapshots, outputting daily Parquet tables for downstream monthly aggregation.",
+    "howItAffectsYourReach": "Active account-level labels suppress all content from recommendation candidate sourcing (For You, Search, Explore) for every day the label remains active.",
+    "theGoldenRule": "Account-level flags act as platform-wide distribution circuit breakers; keep your account fully compliant to maintain uninterrupted recommendation eligibility."
+  },
+  {
+    "path": "under-the-hood/scalding/UthMhInjections.scala",
+    "inSimpleTerms": "This file defines the binary Thrift codecs and key-value serializers used to write aggregated user and cohort statistics directly into Manhattan storage engines.",
+    "whyThisExists": "High-throughput batch writers must serialize Scala Thrift objects into optimized byte arrays matching Manhattan's internal storage format.",
+    "howItAffectsYourReach": "Enables ultra-fast database reads when recommendation and transparency services query an author's safety history.",
+    "theGoldenRule": "Binary serialization guarantees that complex safety profiles and monthly metrics are queried in single-digit milliseconds during live serving."
+  },
+  {
+    "path": "under-the-hood/scalding/UthUserMonthMhPublisherJob.scala",
+    "inSimpleTerms": "This production job rolls up daily eligible post tallies and safety label aggregations into complete user-month summary records and publishes them directly to Manhattan and Parquet.",
+    "whyThisExists": "Assembles the final, queryable monthly transparency dataset for every creator on X, computing total posts, carried labels, and active restriction days per calendar month.",
+    "howItAffectsYourReach": "Provides the definitive monthly safety scorecard that downstream systems and transparency portals consult to verify author trust and distribution standing.",
+    "theGoldenRule": "Publishing requires settled observation windows (postObservationDays); staying penalty-free for the entire calendar month locks in a 100% clean transparency score."
+  },
+  {
+    "path": "under-the-hood/scalding/UthReferenceMonthMhPublisherJob.scala",
+    "inSimpleTerms": "This batch job calculates platform-wide statistical distributions (mean, p10, p25, p50, p75, p90, p99) of post and account safety rates across follower tiers using QTree quantile sketches.",
+    "whyThisExists": "Computing exact percentiles over hundreds of millions of users is computationally intractable; QTree sketches allow memory-efficient, highly accurate quantile aggregation in MapReduce.",
+    "howItAffectsYourReach": "Establishes platform moderation benchmarks that identify whether an account's enforcement frequency is statistically typical or an extreme outlier.",
+    "theGoldenRule": "Large accounts (100k+ followers) are held to tighter compliance standards; keeping your violation rate below the 50th percentile of your cohort protects algorithmic trust."
+  },
+  {
+    "path": "under-the-hood/scalding/legacy_experimental_adhoc/UthGizmoduckSafetyFlagDailyBackfillJob.scala",
+    "inSimpleTerms": "This legacy ad-hoc job backfills historical daily safety flags (such as NsfwAdmin) by anchoring on a recent user snapshot and traversing modification diffs backward in time.",
+    "whyThisExists": "Created as an emergency recovery tool to reconstruct past safety flag history when forward modification streams experienced gaps or missed initial state captures.",
+    "howItAffectsYourReach": "Ensured retroactive accuracy for creator safety metrics during system migrations.",
+    "theGoldenRule": "Historical data integrity guarantees that resolved account flags are not incorrectly carried forward into future evaluation cycles."
+  },
+  {
+    "path": "under-the-hood/scalding/legacy_experimental_adhoc/UthFilterTweetSafetyLabelsByDateJob.scala",
+    "inSimpleTerms": "This ad-hoc utility filters large-scale post safety label snapshots down to specific tweet creation windows by joining snapshot records against tweet source datasets.",
+    "whyThisExists": "Allows engineers to extract targeted slices of safety label snapshots for specific date ranges without loading terabytes of unrelated historical data.",
+    "howItAffectsYourReach": "Used for offline analysis and auditing of moderation precision and recall across specific campaigns or events.",
+    "theGoldenRule": "Targeted dataset slicing enables rapid verification of machine learning classifier accuracy, reducing false-positive label rates."
+  },
+  {
+    "path": "under-the-hood/scalding/legacy_experimental_adhoc/UnderTheHoodPostLabelsJob.scala",
+    "inSimpleTerms": "This legacy monthly batch job aggregated post safety events and snapshots directly to compute monthly denominator post counts and carried versus removed label totals.",
+    "whyThisExists": "Served as the original prototype for the Under the Hood post labeling pipeline before the architecture was modernized into modular daily incremental jobs.",
+    "howItAffectsYourReach": "Formed the initial foundation for computing post-level reach suppression and label persistence metrics across the platform.",
+    "theGoldenRule": "Modular daily aggregation superseded monthly batching to provide creators with faster, more reliable transparency reporting."
+  },
+  {
+    "path": "under-the-hood/scalding/legacy_experimental_adhoc/UnderTheHoodAccountLabelsJob.scala",
+    "inSimpleTerms": "This legacy job rolled up monthly account label durations by evaluating user modification streams against seed snapshots across whole calendar months.",
+    "whyThisExists": "Original proof-of-concept pipeline for calculating total active penalty days per user before migrating to the production incremental daily architecture.",
+    "howItAffectsYourReach": "Pioneered the computation of active restriction days that suppress creator reach during policy enforcement periods.",
+    "theGoldenRule": "Continuous daily tracking ensures account penalty durations are calculated with exact day-level precision rather than broad monthly estimates."
+  },
+  {
+    "path": "safety-label-user-agg/postToUserLabelRules.strato",
+    "inSimpleTerms": "This critical rules engine evaluates an author's recent posting history and automatically escalates post-level safety violations into account-level penalties (such as POSSIBLY_NSFW_ACCOUNT or NSFW_HIGH_PRECISION).",
+    "whyThisExists": "Spammers and bad actors frequently distribute policy-violating media across multiple posts; this rules engine aggregates recent post labels within sliding windows to detect repeat offenders and apply account-level restrictions.",
+    "howItAffectsYourReach": "This is one of the most severe algorithmic triggers on X: if your recent posts trigger matching rules (e.g. multiple NSFW or spam flags in a short window), your entire account receives an account-level label that nukes all recommendation reach.",
+    "theGoldenRule": "Avoid clusters of borderline or flagged posts: accumulating multiple post-level labels in a short window triggers automated escalation to full account-level suppression."
+  },
+  {
+    "path": "safety-label-user-agg/safetyLabelToUserLevelAggregationV2Forwarder.strato",
+    "inSimpleTerms": "This streaming forwarder consumes real-time post safety label events from Kafka (`vf_tweet_safety_labels_event_prod`) and dispatches them with a 10-minute delay to the user-level aggregation processor.",
+    "whyThisExists": "A deliberate 10-minute delay prevents race conditions and dampens transient classifier updates, allowing initial automated or manual label adjustments to settle before evaluating account escalation rules.",
+    "howItAffectsYourReach": "Acts as the real-time event pipeline that feeds post violations into the account-level penalty escalation engine.",
+    "theGoldenRule": "The 10-minute buffer provides a critical window where rapid automated appeals or label removals can prevent automated account-level escalation."
+  },
+  {
+    "path": "safety-label-user-agg/safetyLabelToUserLevelAggregationV2Processor.strato",
+    "inSimpleTerms": "This processor executes user escalation rules upon receiving a post safety label event. It checks exemptions (e.g., High PageRank, Grey Badge), scans the author's recent timeline, evaluates rule conditions, and writes new account labels to Gizmoduck.",
+    "whyThisExists": "Automates platform health defense by turning repeated content violations into account-wide restrictions without requiring manual human moderator intervention for every repeat violator.",
+    "howItAffectsYourReach": "When triggered, it writes account labels with configurable TTLs directly into Gizmoduck, immediately hiding the creator's posts from non-followers and eliminating them from For You recommendations.",
+    "theGoldenRule": "Accounts without institutional exemptions (High PageRank or Grey Badge) are strictly subject to automated escalation; maintain clean posting habits to prevent automated account labeling."
+  }
+]
