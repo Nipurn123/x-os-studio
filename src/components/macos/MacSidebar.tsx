@@ -41,14 +41,14 @@ export default function MacSidebar({
 
   return (
     <aside
-      className={`w-full lg:w-72 flex flex-col border-r shrink-0 overflow-hidden select-none font-sans text-xs transition-colors ${
+      className={`w-full lg:w-72 flex flex-col border-r shrink-0 overflow-hidden select-none font-sans text-xs transition-colors h-full ${
         isDark
           ? "border-white/[0.08] bg-black/30 backdrop-blur-xl text-slate-200"
           : "border-black/[0.08] bg-slate-50/70 backdrop-blur-xl text-slate-800"
       }`}
     >
       {/* Top Search Filter */}
-      <div className={`p-3 border-b ${isDark ? "border-white/[0.08]" : "border-black/[0.08]"}`}>
+      <div className={`p-2.5 sm:p-3 border-b shrink-0 ${isDark ? "border-white/[0.08]" : "border-black/[0.08]"}`}>
         <div
           className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-all ${
             isDark
@@ -71,7 +71,7 @@ export default function MacSidebar({
 
       {/* Directory Tree Header */}
       <div
-        className={`flex items-center justify-between px-3 py-2 text-[11px] font-mono font-semibold border-b ${
+        className={`flex items-center justify-between px-3 py-2 text-[11px] font-mono font-semibold border-b shrink-0 ${
           isDark ? "text-slate-400 border-white/[0.04]" : "text-slate-500 border-black/[0.04]"
         }`}
       >
@@ -81,8 +81,8 @@ export default function MacSidebar({
         </span>
       </div>
 
-      {/* Tree Content */}
-      <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
+      {/* Scrollable Tree Content */}
+      <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar touch-scroll min-h-0">
         {filtered ? (
           <div className="space-y-1">
             <div className="text-[10px] font-mono text-slate-400 px-2 py-0.5 uppercase font-bold">
@@ -92,15 +92,15 @@ export default function MacSidebar({
               <div
                 key={node.id}
                 onClick={() => onSelectNode(node)}
-                className={`flex items-center gap-2 p-1.5 rounded-lg cursor-pointer transition-colors ${
+                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
                   selectedNode.id === node.id
                     ? "bg-blue-600 text-white font-medium shadow-xs"
-                    : isDark ? "text-slate-300 hover:bg-white/[0.04]" : "text-slate-700 hover:bg-black/[0.04]"
+                    : isDark ? "text-slate-300 hover:bg-white/[0.04] active:bg-white/[0.08]" : "text-slate-700 hover:bg-black/[0.04] active:bg-black/[0.08]"
                 }`}
               >
-                <FileCode className={`h-3.5 w-3.5 shrink-0 ${selectedNode.id === node.id ? "text-white" : "text-blue-500"}`} />
-                <div className="truncate flex-1">
-                  <div className={`text-xs truncate ${selectedNode.id === node.id ? "text-white" : isDark ? "text-white" : "text-black font-medium"}`}>
+                <FileCode className={`h-4 w-4 shrink-0 ${selectedNode.id === node.id ? "text-white" : "text-blue-500"}`} />
+                <div className="truncate flex-1 min-w-0">
+                  <div className={`text-xs truncate ${selectedNode.id === node.id ? "text-white font-bold" : isDark ? "text-white" : "text-black font-medium"}`}>
                     {node.name}
                   </div>
                   <div className={`text-[10px] truncate font-mono ${selectedNode.id === node.id ? "text-blue-100" : "text-slate-400"}`}>
@@ -164,46 +164,44 @@ function SidebarNode({
     <div>
       <div
         onClick={handleClick}
-        style={{ paddingLeft: `${level * 12 + 6}px` }}
-        className={`flex items-center gap-1.5 py-1 px-2 rounded-md cursor-pointer transition-all ${
+        style={{ paddingLeft: `${Math.max(level * 12 + 6, 6)}px` }}
+        className={`flex items-center gap-1.5 py-1.5 pr-2 rounded-lg cursor-pointer transition-colors text-xs select-none ${
           isSelected
-            ? "bg-blue-600 text-white font-semibold shadow-xs"
-            : isDark ? "text-slate-300 hover:bg-white/[0.05]" : "text-slate-700 hover:bg-black/[0.05]"
+            ? "bg-blue-600 text-white font-medium shadow-xs"
+            : isDark
+            ? "text-slate-300 hover:bg-white/[0.04] active:bg-white/[0.08]"
+            : "text-slate-700 hover:bg-black/[0.04] active:bg-black/[0.08]"
         }`}
       >
         {isFolder ? (
-          <span className="flex h-3.5 w-3.5 items-center justify-center shrink-0">
+          <>
+            <span className="text-slate-400 hover:text-slate-200">
+              {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </span>
             {isOpen ? (
-              <ChevronDown className={`h-3 w-3 ${isSelected ? "text-white" : "text-slate-400"}`} />
+              <FolderOpen className="h-3.5 w-3.5 text-blue-400 shrink-0" />
             ) : (
-              <ChevronRight className={`h-3 w-3 ${isSelected ? "text-white" : "text-slate-400"}`} />
+              <Folder className="h-3.5 w-3.5 text-blue-400 shrink-0" />
             )}
-          </span>
+            <span className="font-mono text-xs truncate flex-1">{node.name}</span>
+            {node.children && (
+              <span className="text-[10px] text-slate-500 font-mono ml-auto">
+                {node.children.length}
+              </span>
+            )}
+          </>
         ) : (
-          <span className="w-3.5 shrink-0" />
-        )}
-
-        {isFolder ? (
-          isOpen ? (
-            <FolderOpen className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "text-yellow-200 fill-yellow-200" : "text-blue-500 fill-blue-500/20"}`} />
-          ) : (
-            <Folder className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "text-yellow-200 fill-yellow-200" : "text-blue-500 fill-blue-500/20"}`} />
-          )
-        ) : (
-          <FileCode className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "text-white" : getLanguageColor()}`} />
-        )}
-
-        <span className="truncate flex-1 font-sans text-xs">{node.name}</span>
-
-        {node.language && !isFolder && !isSelected && (
-          <span className={`text-[9px] font-mono ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-            {node.language.split(" ")[0]}
-          </span>
+          <>
+            <FileCode className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "text-white" : getLanguageColor()}`} />
+            <span className={`font-mono text-xs truncate flex-1 ${isSelected ? "text-white font-bold" : ""}`}>
+              {node.name}
+            </span>
+          </>
         )}
       </div>
 
       {isFolder && isOpen && node.children && (
-        <div className={`border-l ml-2 ${isDark ? "border-white/[0.06]" : "border-black/[0.06]"}`}>
+        <div className="space-y-0.5">
           {node.children.map((child) => (
             <SidebarNode
               key={child.id}

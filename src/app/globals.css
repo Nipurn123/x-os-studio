@@ -15,10 +15,19 @@
 
   body {
     @apply bg-[#07090e] text-slate-100 antialiased min-h-screen overflow-hidden font-sans select-none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: manipulation;
   }
 }
 
-/* Custom modern macOS scrollbars */
+/* Touch & Smooth Mobile Scroll Utility */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+/* Custom modern macOS / iOS scrollbars */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;

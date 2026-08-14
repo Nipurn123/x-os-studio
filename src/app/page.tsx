@@ -29,7 +29,7 @@ export default function MacOSStudio() {
   );
 
   const [activeTab, setActiveTab] = useState<string>("decompiler");
-  const [mobileSubTab, setMobileSubTab] = useState<"tree" | "code" | "inspect">("code");
+  const [mobileSubTab, setMobileSubTab] = useState<"tree" | "code" | "inspect">("tree");
   const [theme, setTheme] = useState<"dark" | "light">("light");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isAgentOpen, setIsAgentOpen] = useState(false);
@@ -73,7 +73,7 @@ export default function MacOSStudio() {
 
   return (
     <div
-      className={`relative flex flex-col h-[100dvh] w-screen overflow-hidden font-sans transition-colors duration-300 select-none ${
+      className={`relative flex flex-col h-[100dvh] w-screen overflow-hidden font-sans transition-colors duration-300 ${
         isDark ? "dark bg-[#07090e] text-slate-100" : "bg-[#f1f3f9] text-slate-900"
       }`}
     >
@@ -88,13 +88,8 @@ export default function MacOSStudio() {
           isDark ? "bg-emerald-500/10 opacity-100" : "bg-emerald-400/20 opacity-70"
         }`}
       />
-      <div
-        className={`pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full blur-[170px] transition-opacity ${
-          isDark ? "bg-purple-600/10 opacity-100" : "bg-indigo-300/20 opacity-70"
-        }`}
-      />
 
-      {/* 1. TOP BAR: Native macOS on Desktop (>=768px) vs. Native iOS Status Bar with Dynamic Island on Mobile (<768px) */}
+      {/* 1. TOP BAR: Desktop macOS (>=768px) vs. Native iOS Status Bar with Dynamic Island on Mobile (<768px) */}
       <div className="hidden md:block">
         <MacTopBar
           activeTab={activeTab}
@@ -170,43 +165,43 @@ export default function MacOSStudio() {
                 {/* Mobile Sub-Tab Segmented Bar (< 1024px) */}
                 <div
                   className={`flex lg:hidden items-center justify-around border-b px-2 py-1.5 shrink-0 ${
-                    isDark ? "bg-black/30 border-white/10" : "bg-slate-100/90 border-slate-200"
+                    isDark ? "bg-black/40 border-white/10" : "bg-slate-100 border-slate-200"
                   }`}
                 >
                   <button
                     onClick={() => setMobileSubTab("tree")}
-                    className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       mobileSubTab === "tree"
                         ? isDark
-                          ? "bg-indigo-600 text-white shadow-sm"
+                          ? "bg-indigo-600 text-white shadow-md"
                           : "bg-white text-indigo-700 shadow-sm"
                         : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     <FolderCode className="w-3.5 h-3.5" />
-                    <span>Files</span>
+                    <span>Files (2,015)</span>
                   </button>
 
                   <button
                     onClick={() => setMobileSubTab("code")}
-                    className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       mobileSubTab === "code"
                         ? isDark
-                          ? "bg-indigo-600 text-white shadow-sm"
+                          ? "bg-indigo-600 text-white shadow-md"
                           : "bg-white text-indigo-700 shadow-sm"
                         : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     <Code className="w-3.5 h-3.5" />
-                    <span>Source Code</span>
+                    <span className="truncate max-w-[90px]">{selectedNode.name}</span>
                   </button>
 
                   <button
                     onClick={() => setMobileSubTab("inspect")}
-                    className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       mobileSubTab === "inspect"
                         ? isDark
-                          ? "bg-indigo-600 text-white shadow-sm"
+                          ? "bg-indigo-600 text-white shadow-md"
                           : "bg-white text-indigo-700 shadow-sm"
                         : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                     }`}
@@ -230,28 +225,30 @@ export default function MacOSStudio() {
                 </div>
 
                 {/* Mobile Active Single-View (Visible on screens < 1024px) */}
-                <div className="flex lg:hidden flex-1 h-full overflow-hidden min-h-0">
+                <div className="flex lg:hidden flex-1 h-full overflow-hidden min-h-0 relative">
                   {mobileSubTab === "tree" && (
-                    <div className="w-full h-full overflow-hidden">
+                    <div className="absolute inset-0 flex flex-col overflow-hidden">
                       <MacSidebar
                         tree={REPOSITORY_TREE}
                         allFiles={allFiles}
                         selectedNode={selectedNode}
                         onSelectNode={(node) => {
                           setSelectedNode(node);
-                          setMobileSubTab("code");
+                          if (node.type === "file") {
+                            setMobileSubTab("code");
+                          }
                         }}
                         theme={theme}
                       />
                     </div>
                   )}
                   {mobileSubTab === "code" && (
-                    <div className="w-full h-full overflow-hidden">
+                    <div className="absolute inset-0 flex flex-col overflow-hidden">
                       <MacCodeViewer node={selectedNode} theme={theme} />
                     </div>
                   )}
                   {mobileSubTab === "inspect" && (
-                    <div className="w-full h-full overflow-y-auto p-2">
+                    <div className="absolute inset-0 overflow-y-auto p-2.5 custom-scrollbar touch-scroll">
                       <MacInspectorCard node={selectedNode} theme={theme} />
                     </div>
                   )}
@@ -262,7 +259,7 @@ export default function MacOSStudio() {
             {/* 2. ARCHITECTURE DIAGRAMS APP */}
             {activeTab === "diagrams" && (
               <div
-                className={`flex-1 overflow-y-auto p-3 sm:p-6 animate-in fade-in duration-200 ${
+                className={`flex-1 overflow-y-auto p-3 sm:p-6 animate-in fade-in duration-200 custom-scrollbar touch-scroll ${
                   isDark ? "bg-black/20" : "bg-slate-50/50"
                 }`}
               >
@@ -273,7 +270,7 @@ export default function MacOSStudio() {
             {/* 3. TWEET DOCTOR APP */}
             {activeTab === "doctor" && (
               <div
-                className={`flex-1 overflow-y-auto p-3 sm:p-6 animate-in fade-in duration-200 ${
+                className={`flex-1 overflow-y-auto p-3 sm:p-6 animate-in fade-in duration-200 custom-scrollbar touch-scroll ${
                   isDark ? "bg-black/20" : "bg-slate-50/50"
                 }`}
               >
@@ -284,7 +281,7 @@ export default function MacOSStudio() {
             {/* 4. WEIGHTS MATRIX APP */}
             {activeTab === "matrix" && (
               <div
-                className={`flex-1 overflow-y-auto p-3 sm:p-6 animate-in fade-in duration-200 ${
+                className={`flex-1 overflow-y-auto p-3 sm:p-6 animate-in fade-in duration-200 custom-scrollbar touch-scroll ${
                   isDark ? "bg-black/20" : "bg-slate-50/50"
                 }`}
               >
@@ -302,7 +299,7 @@ export default function MacOSStudio() {
             {/* 6. ARCHITECTURE README APP */}
             {activeTab === "readme" && (
               <div
-                className={`flex-1 overflow-y-auto p-3 sm:p-6 animate-in fade-in duration-200 ${
+                className={`flex-1 overflow-y-auto p-3 sm:p-6 animate-in fade-in duration-200 custom-scrollbar touch-scroll ${
                   isDark ? "bg-black/20" : "bg-slate-50/50"
                 }`}
               >
@@ -326,7 +323,12 @@ export default function MacOSStudio() {
       <div className="block md:hidden">
         <IOSTabBar
           activeTab={activeTab}
-          onSelectTab={setActiveTab}
+          onSelectTab={(tab) => {
+            setActiveTab(tab);
+            if (tab === "decompiler") {
+              setMobileSubTab("tree");
+            }
+          }}
           theme={theme}
           onToggleAgent={() => setIsAgentOpen((prev) => !prev)}
           isAgentOpen={isAgentOpen}
