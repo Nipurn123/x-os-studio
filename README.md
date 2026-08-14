@@ -16,7 +16,7 @@
 </h1>
 
 <p align="center">
-  <b>Decompile 2,015+ source files. Master the 5-stage candidate funnel (500M to 20 in &lt;100ms). Unlock +20x multipliers, eliminate reach penalties, and engineer viral distribution on X.</b><br/>
+  <b>Decompile 2,015+ source files. Master the 5-stage candidate funnel (500M to 20 in &lt;100ms). Unlock +20x multipliers, eliminate reach penalties, and 100x your reach on X.</b><br/>
   An interactive, macOS Sonoma-grade developer studio deconstructing all candidate funnels, transformer models, and ranking heuristics of the <b>X "For You" Feed Recommendation Algorithm</b>.
 </p>
 
