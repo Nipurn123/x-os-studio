@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Next.js-15.1.7-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 15" />
   <img src="https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-3.4-38bdf8?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/License-AGPL--3.0-green?style=for-the-badge" alt="License" />
+  <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=for-the-badge" alt="License" />
 </p>
 
 <h1 align="center">
@@ -165,8 +165,8 @@ Contributions, issues, and feature requests are welcome! Feel free to check out 
 
 ## 📜 License & Acknowledgments
 
-This visualizer and exploration studio is built and maintained by [100xprompt](https://100xprompt.com).
-The underlying algorithm source code is licensed under **AGPL-3.0** by X Corp.
+This visualizer and exploration studio is built and maintained by [100xprompt](https://100xprompt.com) and licensed under the **Apache-2.0 License**. See [LICENSE](LICENSE) for details.
+The underlying reference algorithm code is licensed under Apache-2.0 / AGPL by X.AI / X Corp.
 
 <p align="center">
   Built with ❤️ by the <a href="https://100xprompt.com">100xprompt</a> team. Live at <a href="https://x.100xprompt.com"><b>x.100xprompt.com</b></a>
