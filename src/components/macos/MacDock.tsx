@@ -75,7 +75,7 @@ export default function MacDock({
     {
       id: "agent",
       name: "AI Copilot (⌘K)",
-      badge: "Gemini 3.7",
+      badge: "AI",
       color: "from-indigo-600 via-purple-600 to-cyan-500",
       icon: <Sparkles className="h-6 w-6 text-white animate-pulse" />,
       isAction: true,

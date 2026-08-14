@@ -1,40 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
+import expertTranslations from "@/lib/decompiler/expertTranslations.json";
 
 export const runtime = "nodejs";
+
+// Load all indexed translations into a fast in-memory map
+const TRANSLATION_MAP = new Map<string, any>();
+if (Array.isArray(expertTranslations)) {
+  expertTranslations.forEach((item: any) => {
+    if (item.path) {
+      TRANSLATION_MAP.set(item.path.toLowerCase(), item);
+    }
+  });
+}
 
 const X_ALGORITHM_SYSTEM_PROMPT = `You are the lead Principal Recommendation Systems Architect for X-OS Studio (built by 100xprompt), the world's most authoritative open-source X recommendation algorithm intelligence system.
 
 You possess deep, line-by-line understanding of all 2,015 files in the open-source X recommendation repository (xai-org/x-algorithm).
 
-### PRODUCTION RANKING WEIGHTS (Exact values from codebase):
+### CORE DIRECTIVE:
+- **DIRECT & SPECIFIC**: Answer ONLY the exact question the user asks. If the user asks about \`home-mixer\`, answer specifically and exclusively about \`home-mixer\`. Do NOT dump the entire repository pipeline or recite unrelated subsystems unless directly asked.
+- **SURGICAL RELEVANCE**: Focus on the specific files, structs, mechanisms, and rules requested.
+- **GROUNDED IN CODE**: Cite the exact file paths from the repository using backticks (e.g. \`home-mixer/candidate_hydrators/bidirectional_follow_hydrator.rs\`).
+- **NO REPEATED BOILERPLATE**: Avoid formulaic generic intros ("Based on all 2,015 files..."). Jump straight into the direct, authentic answer.
+
+### PRODUCTION RANKING WEIGHTS (From Rust & JAX codebase):
 - ShareViaCopyLink (Bookmark/Copy Link): +20.0 (40x Like Multiplier — HIGHEST engagement boost)
-- BidirectionalFollowReplyBoost (Mutual Conversation): +15.0 to +20.0
-- Reply with Author Engagement: +5.0
+- BidirectionalFollowReplyBoost (Mutual Conversation): +15.0 to +20.0 in home-mixer/candidate_hydrators/bidirectional_follow_hydrator.rs
+- Reply with Author Engagement: +5.0 in home-mixer/scorers/ranking_scorer.rs
 - Quote Post: +5.0
 - ShareViaDm: +5.0
 - FollowAuthor: +4.0
-- Video Watch (>50% retention): +1.0
+- Video Watch (>50% retention): +1.0 in home-mixer/candidate_hydrators/video_duration_candidate_hydrator.rs
 - Retweet / Repost: +1.0
 - Favorite / Like: +0.5 (Base baseline, very low weight)
 - OpenRawLink (Outbound links): +0.2 (-80% penalty compared to native posts)
-- ReportPost: -234.0 (Catastrophic penalty: destroys score of ~468 likes)
+- ReportPost: -234.0 (Catastrophic penalty: destroys score of ~468 likes in home-mixer/scorers/ranking_scorer.rs)
 - MuteAuthor: -58.8 penalty
 - NotInterested: -43.2 penalty
-- BlockAuthor: -74.0 penalty
+- BlockAuthor: -74.0 penalty in home-mixer/candidate_hydrators/blocked_by_hydrator.rs
 
-### CORE SUBSYSTEMS ARCHITECTURE:
-1. Phoenix (phoenix/): Two-Tower retrieval model (user tower + candidate tower in JAX) narrowing 500M posts to ~1,500 candidates, followed by the Heavy Transformer Ranker scoring candidate engagement probabilities.
-2. Thunder (thunder/): High-throughput in-memory cache indexing recent posts from accounts the viewer follows (in-network retrieval).
-3. SimClusters (simclusters/): Matrix factorization community clustering mapping users and tweets into semantic interest clusters for out-of-network discovery.
-4. Visibility Filtering (visibility-filtering/): Drops, mutes, or adds interstitials based on rules (BotMaker, Scarecrow) and account reputation models (Agatha, BDSM, User-Cred-v2).
-5. User-Cred-v2 (user-cred-v2/): GraphJet real-time PageRank-style account authority score. Low score disqualifies tweets from out-of-network candidate retrieval.
-6. Blending & DPP Diversity (vm-ranker/): Determinantal Point Process ensuring author diversity, preventing timeline fatigue, and interleaving ads/follow suggestions into the final 20-post feed.
-
-### YOUR RESPONSE GUIDELINES:
-- Deliver precise, actionable, and mathematically grounded answers.
-- Format responses with crisp markdown, bullet points, and code/formula snippets where helpful.
-- When explaining strategies, reference the exact code mechanics and weights.
-- Be concise, energetic, and authoritative.`;
+### FORMATTING CONVENTIONS:
+- When a flow or sequence is relevant, format it with triple-backtick diagram blocks:
+\`\`\`diagram
+Step 1 -> Step 2 -> Step 3
+\`\`\`
+- Highlight multipliers with explicit signs (e.g. \`+20.0\`, \`+5.0\`, \`-234.0\`).`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,41 +54,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Messages array required" }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-
-    // Build context-aware prompt
-    let contextualSystemPrompt = X_ALGORITHM_SYSTEM_PROMPT;
-    if (activeFile && activeFile.path) {
-      contextualSystemPrompt += `\n\n### USER CURRENTLY VIEWING FILE:\nPath: ${activeFile.path}\nSubsystem: ${activeFile.subsystem || "Core"}\nDescription: ${activeFile.description || "N/A"}`;
-    }
-
-    if (!apiKey) {
-      // Offline fallback: intelligent mock response based on algorithm knowledge
-      const lastUserMessage = messages[messages.length - 1]?.content || "";
-      const fallbackResponse = generateAlgorithmResponse(lastUserMessage, activeFile);
-      
-      const encoder = new TextEncoder();
-      const customReadable = new ReadableStream({
-        async start(controller) {
-          const words = fallbackResponse.split(" ");
-          for (const word of words) {
-            controller.enqueue(encoder.encode(word + " "));
-            await new Promise((r) => setTimeout(r, 20));
+    // Read key from process.env (or .env.local fallback on local dev)
+    let apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+    if (!apiKey || apiKey === "proxy-managed-key") {
+      try {
+        const fs = await import("fs");
+        const path = await import("path");
+        const envLocalPath = path.join(process.cwd(), ".env.local");
+        if (fs.existsSync(envLocalPath)) {
+          const raw = fs.readFileSync(envLocalPath, "utf8");
+          const m = raw.match(/GEMINI_API_KEY=([^\r\n]+)/);
+          if (m && m[1]) {
+            apiKey = m[1].trim();
           }
-          controller.close();
-        },
-      });
+        }
+      } catch (e) {
+        // pass through
+      }
+    }
 
-      return new Response(customReadable, {
-        headers: {
-          "Content-Type": "text/plain; charset=utf-8",
-          "Transfer-Encoding": "chunked",
-        },
+    const lastUserQuery = messages[messages.length - 1]?.content || "";
+
+    // Dynamic Code Knowledge Ingestion: Find relevant files from repository index based on user query
+    const relevantFiles = findRelevantSourceFiles(lastUserQuery, activeFile);
+
+    let contextualSystemPrompt = X_ALGORITHM_SYSTEM_PROMPT;
+
+    if (relevantFiles.length > 0) {
+      contextualSystemPrompt += `\n\n### EXACT RELEVANT CODEBASE FILES FOR THIS QUESTION:\n`;
+      relevantFiles.forEach((file) => {
+        contextualSystemPrompt += `\n- Path: \`${file.path}\`\n  What it does: ${file.inSimpleTerms}\n  Why engineers built it: ${file.whyThisExists}\n  Effect on reach: ${file.howItAffectsYourReach}\n  Key rule: ${file.theGoldenRule}\n`;
       });
     }
 
-    // Call Gemini 3.7 Flash API (or Gemini 2.5 Flash if 3.7 route unavailable)
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+    if (activeFile && activeFile.path) {
+      contextualSystemPrompt += `\n\n### USER CURRENTLY VIEWING IN DECOMPILER:\nPath: \`${activeFile.path}\`\nSubsystem: ${activeFile.subsystem || "Core"}\nDescription: ${activeFile.description || "N/A"}`;
+    }
+
+    // Call Google Gemini 3.7 Flash API
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`;
 
     const formattedContents = messages.map((m: { role: string; content: string }) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -91,8 +105,7 @@ export async function POST(req: NextRequest) {
       },
       contents: formattedContents,
       generationConfig: {
-        temperature: 0.4,
-        topP: 0.95,
+        temperature: 0.3,
         maxOutputTokens: 2048,
       },
     };
@@ -103,47 +116,35 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(geminiPayload),
     });
 
-    if (!geminiRes.ok) {
-      const errorText = await geminiRes.text();
-      console.warn("Gemini API Error, falling back to local synthesizer:", errorText);
-      const lastUserMessage = messages[messages.length - 1]?.content || "";
-      const fallbackResponse = generateAlgorithmResponse(lastUserMessage, activeFile);
-      return new Response(fallbackResponse, {
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
+    if (geminiRes.ok) {
+      const data = await geminiRes.json();
+      const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (generatedText) {
+        const encoder = new TextEncoder();
+        const customReadable = new ReadableStream({
+          async start(controller) {
+            const chunks = generatedText.split(" ");
+            for (let i = 0; i < chunks.length; i++) {
+              controller.enqueue(encoder.encode(chunks[i] + (i < chunks.length - 1 ? " " : "")));
+              await new Promise((r) => setTimeout(r, 10));
+            }
+            controller.close();
+          },
+        });
+
+        return new Response(customReadable, {
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Transfer-Encoding": "chunked",
+          },
+        });
+      }
     }
 
-    // Transform SSE response from Gemini into plain streaming text
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-
-    const transformStream = new TransformStream({
-      transform(chunk, controller) {
-        const text = decoder.decode(chunk);
-        const lines = text.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const dataStr = line.slice(6).trim();
-            if (dataStr === "[DONE]") continue;
-            try {
-              const parsed = JSON.parse(dataStr);
-              const candidateText = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (candidateText) {
-                controller.enqueue(encoder.encode(candidateText));
-              }
-            } catch {
-              // pass through unparseable chunks
-            }
-          }
-        }
-      },
-    });
-
-    return new Response(geminiRes.body?.pipeThrough(transformStream), {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
-      },
+    // Fallback response with targeted answer
+    const fallbackResponse = generateTargetedAlgorithmResponse(lastUserQuery, activeFile, relevantFiles);
+    return new Response(fallbackResponse, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   } catch (error: any) {
     console.error("Agent chat error:", error);
@@ -151,71 +152,102 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function generateAlgorithmResponse(query: string, activeFile?: any): string {
+function findRelevantSourceFiles(query: string, activeFile?: any): any[] {
+  const q = query.toLowerCase();
+  const matched: any[] = [];
+
+  if (activeFile && activeFile.path) {
+    const direct = TRANSLATION_MAP.get(activeFile.path.toLowerCase());
+    if (direct) matched.push(direct);
+  }
+
+  const keywords = q
+    .replace(/[^\w\s-]/g, "")
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+
+  for (const [path, fileData] of TRANSLATION_MAP.entries()) {
+    if (matched.length >= 8) break;
+    if (matched.some((m) => m.path === fileData.path)) continue;
+
+    let score = 0;
+    const pathText = path.toLowerCase();
+    const simpleText = (fileData.inSimpleTerms || "").toLowerCase();
+
+    for (const kw of keywords) {
+      if (pathText.includes(kw)) score += 4;
+      if (simpleText.includes(kw)) score += 2;
+    }
+
+    if (score >= 2) {
+      matched.push(fileData);
+    }
+  }
+
+  return matched;
+}
+
+function generateTargetedAlgorithmResponse(query: string, activeFile?: any, relevantFiles: any[] = []): string {
   const q = query.toLowerCase();
 
-  if (q.includes("outbound") || q.includes("link") || q.includes("downrank") || q.includes("url")) {
-    return `### 🔗 Why Outbound Links Suffer an ~80% Reach Penalty in the Codebase
+  if (q.includes("home-mixer") || q.includes("home mixer")) {
+    return `### ⚙️ What \`home-mixer/\` Does in the Codebase
 
-In the X recommendation pipeline (\`home-mixer\` and \`candidate-pipeline\`), external URLs are aggressively suppressed in out-of-network candidate retrieval:
+\`\`\`diagram
+Candidate Retrieval -> home-mixer/candidate_hydrators/ -> home-mixer/filters/ -> home-mixer/selectors/ (Top 20)
+\`\`\`
 
-1. **The Scoring Weight Trap**: In \`home-mixer/candidate_hydrators/scorer.rs\`, the base weight for \`OpenLink\` is set to **\`+0.2\`**, compared to **\`+20.0\` for CopyLink** and **\`+5.0\` for Replies**. That makes link clicks **100x less valuable** to the neural ranker than bookmarks.
-2. **Candidate Funnel Filtering**: Outbound links trigger lower dwell time metrics, preventing the candidate from clearing the initial threshold (500M down to 1,500 candidates).
-3. **The Winning Strategy**: Never include links in your primary post. Instead, share high-value text/visuals in the main tweet and drop your link in the first reply within 30 seconds to bypass the early-stage retrieval filter.`;
+\`home-mixer/\` is the **core pipeline orchestrator** written in Rust. It does not calculate machine learning weights itself; instead, it coordinates the entire lifecycle of assembling your feed:
+
+1. **Candidate Retrieval (\`home-mixer/sources/\`)**:
+   - Fetches in-network posts from \`thunder/\` (in-memory cache of followed accounts).
+   - Fetches out-of-network candidates from \`phoenix/\` and \`simclusters/\`.
+
+2. **Feature Hydration (\`home-mixer/candidate_hydrators/\`)**:
+   - Checks if you and the author follow each other mutually in \`home-mixer/candidate_hydrators/bidirectional_follow_hydrator.rs\`.
+   - Fetches metadata (replies, author reputation, video liveness) in \`home-mixer/candidate_hydrators/core_data_candidate_hydrator.rs\`.
+
+3. **Safety & Duplicate Filtering (\`home-mixer/filters/\`)**:
+   - Evicts blocked authors (\`home-mixer/candidate_hydrators/blocked_by_hydrator.rs\`), muted words, duplicate retweets, and already-seen posts.
+
+4. **Timeline Mixing & Selection (\`home-mixer/selectors/blender_selector.rs\`)**:
+   - Calls the Phoenix Ranker (\`home-mixer/scorers/ranking_scorer.rs\`) to sort candidates and applies DPP diversity rules to deliver the final 20-post response.`;
   }
 
-  if (q.includes("boost") || q.includes("mutual") || q.includes("bidirectional") || q.includes("reply")) {
-    return `### 💬 The Bidirectional Follow & Mutual Reply Multiplier (+20.0)
+  if (q.includes("outbound") || q.includes("link") || q.includes("url")) {
+    return `### 🔗 Outbound Links Reach Penalty Breakdown
 
-In July 2026, X committed the **Bidirectional Follow Boost** into \`home-mixer/candidate_hydrators/bidirectional_follow_hydrator.rs\`:
+\`\`\`diagram
+Root Tweet with Link -> Low Dwell Time -> Early Funnel Drop -> -80% Candidate Retrieval
+\`\`\`
 
-- **The Formula**: When an author and viewer mutually follow each other, or when the author actively replies to comments in their thread, the algorithm triggers a **\`+15.0\` to \`+20.0\` boost** on the predicted reply probability $P(\\text{Reply})$.
-- **Impact**: Replying to commenters on your post is effectively worth **40 standard likes** (\`+0.5\` vs \`+20.0\`).
-- **Creator Rule**: Always reply to comments within the first 60 minutes of posting to lock in top-of-feed placement for your followers.`;
+1. **Scoring Weight Trap**: In \`home-mixer/scorers/ranking_scorer.rs\`, the base weight for \`OpenLink\` is only \`+0.2\`, compared to \`+20.0\` for CopyLink and \`+5.0\` for Replies.
+2. **Hydration Penalty**: \`home-mixer/candidate_hydrators/core_data_candidate_hydrator.rs\` flags external URLs, resulting in lower candidate retention.
+3. **Best Practice**: Post clean high-dwell content in the root post, and add your link in the first reply thread.`;
   }
 
-  if (q.includes("phoenix") || q.includes("two tower") || q.includes("ranker") || q.includes("transformer")) {
-    return `### 🧠 Phoenix Transformer Architecture Deep-Dive (\`phoenix/\`)
+  if (q.includes("phoenix") || q.includes("two tower")) {
+    return `### 🧠 Phoenix Transformer Architecture (\`phoenix/\`)
 
-Phoenix is X's modern production recommendation engine written in JAX:
+\`\`\`diagram
+User History -> User Tower Embedding -> Candidate Index -> Phoenix Heavy Ranker -> Top 20
+\`\`\`
 
-1. **Retrieval (Two-Tower Architecture)**:
-   - **User Tower**: Encodes the viewer's recent engagement history (last 100 engagements, topic vectors, user embeddings).
-   - **Candidate Tower**: Pre-computes embeddings for millions of tweets using multi-modal representations and text tokens.
-   - Computes fast inner-product similarity to filter 500M posts down to the top ~1,500 candidates.
-2. **Heavy Ranker (Unified Transformer)**:
-   - Evaluates the top 1,500 candidates simultaneously with multi-head self-attention.
-   - Predicts 12 distinct action probabilities: $P(\\text{Like}), P(\\text{Retweet}), P(\\text{Reply}), P(\\text{CopyLink}), P(\\text{Report}), P(\\text{VideoWatch})$.
-3. **Final Linear Score Blend**:
-   $$\\text{Score} = 20.0 \\cdot P(\\text{CopyLink}) + 20.0 \\cdot P(\\text{MutualReply}) + 5.0 \\cdot P(\\text{Reply}) + 0.5 \\cdot P(\\text{Like}) - 234.0 \\cdot P(\\text{Report})$$`;
+1. **Retrieval**: \`phoenix/xrex/models/recsys_two_tower_model.py\` computes cosine similarity between the user embedding and candidate embeddings in \`phoenix/xrex/models/recsys_embedding.py\`.
+2. **Scorer**: \`phoenix/xrex/models/recsys_model.py\` predicts action probabilities ($P(\\text{Like}), P(\\text{Reply}), P(\\text{CopyLink}), P(\\text{Report})$).
+3. **Formula**: $\\text{Score} = 20.0 \\cdot P(\\text{CopyLink}) + 20.0 \\cdot P(\\text{MutualReply}) + 5.0 \\cdot P(\\text{Reply}) + 0.5 \\cdot P(\\text{Like}) - 234.0 \\cdot P(\\text{Report})$.`;
   }
 
-  if (q.includes("report") || q.includes("penalty") || q.includes("safety") || q.includes("mute")) {
-    return `### 🚨 The Devastating Math of Report & Safety Penalties
+  if (relevantFiles.length > 0) {
+    const topFile = relevantFiles[0];
+    return `### 📄 Analysis of \`${topFile.path}\`
 
-The algorithm assigns extreme negative weights to negative feedback signals:
-
-- **Report Penalty**: **\`-234.0\`** (A single report neutralizes the score of **468 likes**).
-- **Block Author**: **\`-74.0\`** penalty.
-- **Mute Author**: **\`-58.8\`** penalty.
-- **Not Interested In Topic**: **\`-43.2\`** penalty.
-
-In addition, the \`visibility-filtering/\` service continuously polls \`user-cred-v2\` and \`bdsm/\` (Behavioral Inauthentic Account Detection). If your account triggers rapid report velocity, your account score drops, automatically filtering all future tweets from out-of-network candidate retrieval for 7–30 days.`;
+- **Purpose**: ${topFile.inSimpleTerms}
+- **Why Engineers Built It**: ${topFile.whyThisExists}
+- **Reach Impact**: ${topFile.howItAffectsYourReach}
+- **The Golden Rule**: ${topFile.theGoldenRule}`;
   }
 
   return `### ⚡ X Algorithm Engineering Analysis
-
-Based on the open-source X recommendation codebase (\`xai-org/x-algorithm\`):
-
-1. **The 5-Stage Pipeline**: Every user request processes 500M+ posts into the top 20 timeline items in $<100\\text{ms}$ through **Sourcing** (Thunder + Phoenix + SimClusters) $\\to$ **Hydration** $\\to$ **Visibility Filtering** $\\to$ **Neural Scoring** $\\to$ **DPP Blending**.
-2. **Engagement Hierarchy**:
-   - **Bookmark / Copy Link**: \`+20.0\` (Highest boost)
-   - **Mutual Conversation / Replies**: \`+20.0\`
-   - **Author Thread Reply**: \`+5.0\`
-   - **Like / Favorite**: \`+0.5\` (Baseline)
-   - **Outbound Link**: \`+0.2\` (-80% penalty)
-   - **Report / Spam**: \`-234.0\`
-3. **Key Optimization**: To maximize distribution, focus on high-dwell media, trigger conversation threads, avoid external URLs in the root tweet, and prompt bookmarks over simple likes.
-
-${activeFile ? `\n*Currently inspecting:* \`${activeFile.path}\` (${activeFile.subsystem || "Core"})` : ""}`;
+Please ask about any specific subsystem (e.g. \`home-mixer\`, \`phoenix\`, \`simclusters\`, \`thunder\`, or ranking weights) for a targeted code breakdown.`;
 }

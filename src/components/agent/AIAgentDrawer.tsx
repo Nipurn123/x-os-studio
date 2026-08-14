@@ -5,19 +5,15 @@ import {
   Sparkles,
   X,
   Send,
-  Bot,
-  User,
-  Zap,
-  HelpCircle,
-  Copy,
-  Check,
-  Code,
-  ExternalLink,
-  ChevronRight,
+  Trash2,
   Maximize2,
   Minimize2,
-  Trash2,
+  Copy,
+  Check,
+  Expand,
+  Shrink,
 } from "lucide-react";
+import { FormattedMarkdown } from "./FormattedMarkdown";
 
 interface Message {
   id: string;
@@ -38,13 +34,45 @@ interface AIAgentDrawerProps {
   onOpenFile?: (path: string) => void;
 }
 
+const STORAGE_KEY = "x_os_intelligence_chat_history_v1";
+
 const QUICK_PROMPTS = [
-  { label: "Why are outbound links downranked?", prompt: "Why do outbound links suffer an 80% reach penalty in the X algorithm code?" },
-  { label: "Explain Phoenix Two-Tower ranking", prompt: "Explain how the Phoenix Two-Tower retrieval and Heavy Ranker transformer work in JAX." },
-  { label: "How does mutual follow boost work?", prompt: "How does the +20.0 mutual conversation boost (BidirectionalFollowReplyBoost) work?" },
-  { label: "What happens if a tweet gets reported?", prompt: "What is the mathematical penalty of receiving a report (-234.0) in the ranking formula?" },
-  { label: "Audit my tweet for reach", prompt: "How do I audit and optimize a tweet draft for maximum dwell time, bookmarks, and reach?" },
+  {
+    label: "Why are outbound links downranked?",
+    prompt: "Why do outbound links suffer an 80% reach penalty in the X algorithm code?",
+  },
+  {
+    label: "Explain Phoenix Two-Tower ranking",
+    prompt: "Explain how the Phoenix Two-Tower retrieval and Heavy Ranker transformer work in JAX.",
+  },
+  {
+    label: "How does mutual follow boost work?",
+    prompt: "How does the +20.0 mutual conversation boost (BidirectionalFollowReplyBoost) work?",
+  },
+  {
+    label: "What happens if a tweet gets reported?",
+    prompt: "What is the mathematical penalty of receiving a report (-234.0) in the ranking formula?",
+  },
 ];
+
+const INITIAL_MESSAGE: Message = {
+  id: "welcome-msg",
+  role: "assistant",
+  content: `### ⚡ X Algorithm Intelligence Copilot
+
+Ask anything about the open-source X recommendation engine.
+
+\`\`\`diagram
+Sourcing (500M Posts) -> Hydration -> Visibility Filtering -> Phoenix Heavy Ranker -> Top 20 Feed
+\`\`\`
+
+- **Production Weights**: Inquire about \`+20.0\` CopyLink, \`+20.0\` Mutual Conversation, or \`-234.0\` Report penalties.
+- **Subsystem Breakdown**: Explore \`phoenix/\`, \`thunder/\`, \`simclusters/\`, or \`home-mixer/\`.
+- **Code Navigation**: Tap any highlighted file path to jump to that file in the Finder Decompiler.`,
+  timestamp: "12:00 PM",
+};
+
+type ViewMode = "compact" | "wide" | "fullscreen";
 
 export function AIAgentDrawer({
   isOpen,
@@ -52,30 +80,39 @@ export function AIAgentDrawer({
   isDark,
   activeFile,
   onOpenFile,
-}: AIAgentDrawerProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome-msg",
-      role: "assistant",
-      content: `### ⚡ Welcome to X Algorithm AI Agent (Gemini 3.7 Flash)
-
-I am your resident **X Recommendation Systems Engineer**. I have full architectural context on all **2,015 files** in the open-source algorithm repository.
-
-**Ask me anything about:**
-- Mathematical scoring weights (+20.0 CopyLink, +20.0 Mutual Reply, -234.0 Report)
-- Phoenix Transformer Two-Tower retrieval & JAX serving pipelines
-- Visibility Filtering, Agatha, BDSM & User-Cred-v2 account reputation
-- Practical strategies to maximize your impressions & monetization reach`,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    },
-  ]);
+}: AIAgentDrawerProps): React.JSX.Element | null {
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("compact");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load local chat history", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 1) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      } catch (e) {
+        console.warn("Failed to save local chat history", e);
+      }
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (isOpen) {
@@ -94,11 +131,16 @@ I am your resident **X Recommendation Systems Engineer**. I have full architectu
   };
 
   const handleClear = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.warn("Failed to clear local chat history", e);
+    }
     setMessages([
       {
         id: "welcome-reset",
         role: "assistant",
-        content: `Chat session reset. What would you like to explore in the X recommendation engine?`,
+        content: `### 🔄 Session Reset\nChat history cleared from your browser storage. Ask any question about the X recommendation algorithm codebase.`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
     ]);
@@ -166,7 +208,7 @@ I am your resident **X Recommendation Systems Engineer**. I have full architectu
           msg.id === assistantId
             ? {
                 ...msg,
-                content: `⚠️ Failed to get response from AI Agent: ${err.message || "Please check connection"}`,
+                content: `⚠️ Failed to get response: ${err.message || "Please check connection"}`,
               }
             : msg
         )
@@ -178,207 +220,266 @@ I am your resident **X Recommendation Systems Engineer**. I have full architectu
 
   if (!isOpen) return null;
 
+  // Sizing matrix for responsive elegance
+  const getContainerStyles = () => {
+    if (viewMode === "fullscreen") {
+      return "fixed inset-3 sm:inset-5 z-50 rounded-3xl";
+    }
+    if (viewMode === "wide") {
+      return "fixed top-8 bottom-16 right-3 sm:right-6 w-[860px] max-w-[95vw] z-50 rounded-2xl";
+    }
+    // compact default
+    return "fixed top-8 bottom-16 right-3 sm:right-6 w-[450px] max-w-[95vw] z-50 rounded-2xl";
+  };
+
   return (
-    <div
-      className={`fixed top-11 bottom-16 z-50 transition-all duration-300 flex flex-col ${
-        isExpanded ? "w-[680px] right-4" : "w-[440px] right-4"
-      } ${
-        isDark
-          ? "bg-[#0b0e17]/95 border border-white/15 text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
-          : "bg-white/95 border border-slate-300 text-slate-900 shadow-[0_20px_60px_rgba(0,0,0,0.2)]"
-      } backdrop-blur-2xl rounded-2xl overflow-hidden`}
-    >
-      {/* Header */}
-      <div
-        className={`flex items-center justify-between px-4 py-3 border-b select-none ${
-          isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-slate-50/80"
-        }`}
-      >
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Sparkles className="w-4 h-4 text-white animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-bold tracking-tight">X-OS AI Copilot</span>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Gemini 3.7 Flash
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400">2,015 files context indexed</p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-1.5">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            title={isExpanded ? "Collapse" : "Expand"}
-            className={`p-1.5 rounded-lg transition-colors ${
-              isDark ? "hover:bg-white/10 text-slate-400" : "hover:bg-slate-200 text-slate-600"
-            }`}
-          >
-            {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-          </button>
-          <button
-            onClick={handleClear}
-            title="Clear Chat"
-            className={`p-1.5 rounded-lg transition-colors ${
-              isDark ? "hover:bg-white/10 text-slate-400" : "hover:bg-slate-200 text-slate-600"
-            }`}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={onClose}
-            title="Close (Esc)"
-            className={`p-1.5 rounded-lg transition-colors ${
-              isDark ? "hover:bg-white/10 text-slate-400" : "hover:bg-slate-200 text-slate-600"
-            }`}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Active File Context Pill if available */}
-      {activeFile && activeFile.path && (
+    <>
+      {/* Dimmed backdrop when in Fullscreen Mode */}
+      {viewMode === "fullscreen" && (
         <div
-          className={`flex items-center justify-between px-3 py-1.5 text-[10px] border-b ${
-            isDark
-              ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-300"
-              : "bg-indigo-50 border-indigo-200 text-indigo-700"
-          }`}
-        >
-          <div className="flex items-center space-x-1.5 truncate">
-            <Code className="w-3 h-3 flex-shrink-0" />
-            <span className="font-mono truncate">{activeFile.path}</span>
-          </div>
-          <span className="font-semibold text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/20">
-            Active Context
-          </span>
-        </div>
+          onClick={() => setViewMode("compact")}
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 transition-opacity animate-in fade-in"
+        />
       )}
 
-      {/* Message List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs select-text">
-        {messages.map((msg) => {
-          const isUser = msg.role === "user";
-          return (
-            <div
-              key={msg.id}
-              className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
-            >
-              <div className="flex items-center space-x-1.5 mb-1 px-1 text-[10px] text-slate-400">
-                {isUser ? (
-                  <>
-                    <span>You</span>
-                    <User className="w-2.5 h-2.5" />
-                  </>
-                ) : (
-                  <>
-                    <Bot className="w-2.5 h-2.5 text-indigo-400" />
-                    <span className="font-semibold text-indigo-400">X-OS Copilot</span>
-                  </>
-                )}
-                <span>• {msg.timestamp}</span>
-              </div>
-
-              <div
-                className={`relative group max-w-[92%] rounded-xl px-3.5 py-2.5 ${
-                  isUser
-                    ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20"
-                    : isDark
-                    ? "bg-white/[0.04] border border-white/10 text-slate-200"
-                    : "bg-slate-100 border border-slate-200 text-slate-800"
-                }`}
+      <div
+        className={`${getContainerStyles()} transition-all duration-300 flex flex-col ${
+          isDark
+            ? "bg-[#11141e]/95 border border-white/15 text-slate-100 shadow-[0_25px_80px_rgba(0,0,0,0.85)] ring-1 ring-white/10"
+            : "bg-[#fcfcfe]/95 border border-slate-300 text-slate-900 shadow-[0_25px_80px_rgba(0,0,0,0.18)] ring-1 ring-black/5"
+        } backdrop-blur-3xl overflow-hidden`}
+      >
+        {/* Apple Native Minimal Titlebar */}
+        <div
+          className={`flex items-center justify-between px-3.5 py-2.5 border-b select-none shrink-0 ${
+            isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200/90 bg-slate-50/80"
+          }`}
+        >
+          {/* Left: Traffic Lights & Minimal Label */}
+          <div className="flex items-center space-x-2.5">
+            {/* Traffic Lights */}
+            <div className="flex items-center space-x-2 mr-0.5">
+              <button
+                onClick={onClose}
+                title="Close (Esc)"
+                className="w-3 h-3 rounded-full bg-[#FF5F56] border border-[#E0443E] hover:opacity-80 transition-opacity flex items-center justify-center group cursor-pointer"
               >
-                {/* Content */}
-                <div className="prose prose-invert prose-xs max-w-none leading-relaxed whitespace-pre-wrap font-sans">
-                  {msg.content || (
-                    <span className="inline-flex items-center space-x-1 text-slate-400 italic">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-                      <span>Thinking with Gemini 3.7 Flash...</span>
-                    </span>
-                  )}
-                </div>
+                <X className="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100" />
+              </button>
+              <button
+                onClick={() => setViewMode(viewMode === "compact" ? "wide" : "compact")}
+                title="Toggle Compact / Wide"
+                className="w-3 h-3 rounded-full bg-[#FFBD2E] border border-[#DEA123] hover:opacity-80 transition-opacity flex items-center justify-center group cursor-pointer"
+              >
+                <div className="w-1.5 h-0.5 bg-black/60 opacity-0 group-hover:opacity-100" />
+              </button>
+              <button
+                onClick={() => setViewMode(viewMode === "fullscreen" ? "compact" : "fullscreen")}
+                title={viewMode === "fullscreen" ? "Exit Fullscreen" : "Enter Fullscreen"}
+                className="w-3 h-3 rounded-full bg-[#27C93F] border border-[#1AAB29] hover:opacity-80 transition-opacity flex items-center justify-center group cursor-pointer"
+              >
+                <Expand className="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100" />
+              </button>
+            </div>
 
-                {/* Copy action */}
-                {!isUser && msg.content && (
-                  <div className="absolute right-2 bottom-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => handleCopy(msg.id, msg.content)}
-                      className={`p-1 rounded bg-black/40 hover:bg-black/60 text-slate-300 transition-colors`}
-                      title="Copy response"
-                    >
-                      {copiedId === msg.id ? (
-                        <Check className="w-3 h-3 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                    </button>
-                  </div>
-                )}
+            {/* Siri Orb */}
+            <div className="relative w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-cyan-400 p-[1px] shadow-sm">
+              <div className="w-full h-full rounded-full bg-[#11141e] flex items-center justify-center">
+                <Sparkles className="w-2.5 h-2.5 text-cyan-300" />
               </div>
             </div>
-          );
-        })}
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Quick Prompts */}
-      <div
-        className={`px-3 py-2 border-t overflow-x-auto no-scrollbar flex items-center space-x-1.5 ${
-          isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50"
-        }`}
-      >
-        <Zap className="w-3 h-3 text-amber-400 flex-shrink-0" />
-        {QUICK_PROMPTS.map((qp, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleSend(qp.prompt)}
-            disabled={isLoading}
-            className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
-              isDark
-                ? "bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 border border-white/10"
-                : "bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 shadow-sm"
-            } disabled:opacity-50`}
-          >
-            {qp.label}
-          </button>
-        ))}
-      </div>
+            <span className="text-xs font-bold tracking-tight">Intelligence</span>
+          </div>
 
-      {/* Input Form */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSend();
-        }}
-        className={`p-3 border-t flex items-center space-x-2 ${
-          isDark ? "border-white/10 bg-white/[0.04]" : "border-slate-200 bg-white"
-        }`}
-      >
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask any question about the X algorithm..."
-          disabled={isLoading}
-          className={`flex-1 px-3 py-2 rounded-xl text-xs outline-none transition-all ${
-            isDark
-              ? "bg-black/50 border border-white/15 text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              : "bg-slate-50 border border-slate-300 text-black placeholder-slate-400 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+          {/* Right: Apple Segmented Pill & Trash */}
+          <div className="flex items-center space-x-1.5">
+            {/* Apple Segmented View Control */}
+            <div
+              className={`flex items-center p-0.5 rounded-lg border text-[10px] font-medium ${
+                isDark ? "bg-black/50 border-white/10" : "bg-slate-200/80 border-slate-300"
+              }`}
+            >
+              <button
+                onClick={() => setViewMode("compact")}
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  viewMode === "compact"
+                    ? isDark ? "bg-white/20 text-white font-bold" : "bg-white text-black font-bold shadow-sm"
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                Drawer
+              </button>
+              <button
+                onClick={() => setViewMode("wide")}
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  viewMode === "wide"
+                    ? isDark ? "bg-white/20 text-white font-bold" : "bg-white text-black font-bold shadow-sm"
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                Wide
+              </button>
+              <button
+                onClick={() => setViewMode("fullscreen")}
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  viewMode === "fullscreen"
+                    ? isDark ? "bg-white/20 text-white font-bold" : "bg-white text-black font-bold shadow-sm"
+                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                Full
+              </button>
+            </div>
+
+            <button
+              onClick={handleClear}
+              title="Clear Chat History"
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                isDark ? "hover:bg-white/10 text-slate-400 hover:text-white" : "hover:bg-slate-200 text-slate-500 hover:text-black"
+              }`}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Message Stream */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs select-text overflow-x-hidden">
+          <div className={`${viewMode === "fullscreen" ? "max-w-4xl mx-auto space-y-4" : "space-y-3.5"}`}>
+            {messages.map((msg) => {
+              const isUser = msg.role === "user";
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col w-full ${isUser ? "items-end" : "items-start"}`}
+                >
+                  <div className="flex items-center space-x-1.5 mb-1 px-1 text-[10px] text-slate-400 select-none">
+                    {isUser ? (
+                      <span className="font-semibold text-slate-500">You</span>
+                    ) : (
+                      <span className={`font-bold ${isDark ? "text-indigo-400" : "text-indigo-600"}`}>
+                        X-OS Intelligence
+                      </span>
+                    )}
+                    <span>• {msg.timestamp}</span>
+                  </div>
+
+                  <div
+                    className={`relative group w-full ${
+                      isUser
+                        ? "max-w-[85%] sm:max-w-[70%] bg-[#007AFF] text-white self-end ml-auto rounded-2xl px-4 py-2.5 shadow-sm"
+                        : viewMode === "fullscreen"
+                        ? "max-w-full rounded-2xl px-5 py-4 shadow-sm"
+                        : "max-w-[96%] rounded-2xl px-4 py-3 shadow-sm"
+                    } ${
+                      !isUser &&
+                      (isDark
+                        ? "bg-white/[0.04] border border-white/10 text-slate-200"
+                        : "bg-white border border-slate-200/90 text-slate-900 shadow-sm")
+                    } transition-all overflow-hidden`}
+                  >
+                    {/* Formatted Markdown */}
+                    {isUser ? (
+                      <div className="whitespace-pre-wrap font-medium break-words leading-relaxed text-sm">
+                        {msg.content}
+                      </div>
+                    ) : msg.content ? (
+                      <FormattedMarkdown content={msg.content} isDark={isDark} onOpenFile={onOpenFile} />
+                    ) : (
+                      <div className="flex items-center space-x-2 py-1 text-slate-400 italic">
+                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                        <span>Reasoning with X recommendation architecture...</span>
+                      </div>
+                    )}
+
+                    {!isUser && msg.content && (
+                      <div className="absolute right-2.5 top-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleCopy(msg.id, msg.content)}
+                          className={`p-1.5 rounded-lg ${
+                            isDark
+                              ? "bg-black/60 hover:bg-black/80 text-slate-300"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-700 shadow-sm"
+                          } transition-colors cursor-pointer`}
+                          title="Copy message"
+                        >
+                          {copiedId === msg.id ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Quick Prompts Container */}
+        <div
+          className={`px-3 py-2 border-t overflow-x-auto no-scrollbar flex items-center space-x-1.5 select-none shrink-0 ${
+            isDark ? "border-white/10 bg-white/[0.02]" : "border-slate-200 bg-slate-50/70"
           }`}
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || isLoading}
-          className="p-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-indigo-600/20 flex-shrink-0"
         >
-          <Send className="w-3.5 h-3.5" />
-        </button>
-      </form>
-    </div>
+          <div className={`${viewMode === "fullscreen" ? "max-w-4xl mx-auto w-full flex items-center space-x-1.5 overflow-x-auto no-scrollbar" : "flex items-center space-x-1.5"}`}>
+            {QUICK_PROMPTS.map((qp, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSend(qp.prompt)}
+                disabled={isLoading}
+                className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[10px] font-medium transition-all cursor-pointer ${
+                  isDark
+                    ? "bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border border-white/10 active:scale-95"
+                    : "bg-white hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm active:scale-95"
+                } disabled:opacity-50`}
+              >
+                {qp.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Inset Search Composer */}
+        <div
+          className={`p-2.5 sm:p-3.5 border-t shrink-0 ${
+            isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white"
+          }`}
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
+            className={`flex items-center space-x-2 ${viewMode === "fullscreen" ? "max-w-4xl mx-auto" : ""}`}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask any architectural question about the X algorithm..."
+              disabled={isLoading}
+              className={`flex-1 px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all ${
+                isDark
+                  ? "bg-black/50 border border-white/15 text-white placeholder-slate-500 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50"
+                  : "bg-slate-100 border border-slate-300 text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/50"
+              }`}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="p-2.5 rounded-xl bg-[#007AFF] hover:bg-[#0066d6] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-500/20 flex-shrink-0 cursor-pointer active:scale-95"
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          </form>
+        </div>
+      </div>
+    </>
   );
 }
