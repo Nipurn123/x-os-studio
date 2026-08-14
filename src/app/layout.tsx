@@ -30,6 +30,14 @@ export const metadata: Metadata = {
     description: "Crack the X recommendation algorithm: Decompile 2,015 files, test Phoenix neural ranker multipliers, and audit your tweets in real-time.",
     url: "https://x.100xprompt.com",
     siteName: "X-OS Studio by 100xprompt",
+    images: [
+      {
+        url: "https://x.100xprompt.com/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "X-OS Studio by 100xprompt",
+      },
+    ],
     locale: "en_US",
     type: "website",
   },
@@ -37,6 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "X-OS Studio — Interactive X (Twitter) Algorithm Decompiler & Architecture Suite",
     description: "Crack the X recommendation algorithm: Decompile 2,015 files, test Phoenix neural ranker multipliers, and audit your tweets in real-time.",
+    images: ["https://x.100xprompt.com/opengraph-image"],
     creator: "@100xprompt",
   },
 };
