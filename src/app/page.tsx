@@ -14,6 +14,7 @@ import TweetDoctorApp from "@/components/apps/TweetDoctorApp";
 import AlgorithmMatrixApp from "@/components/apps/AlgorithmMatrixApp";
 import TerminalApp from "@/components/apps/TerminalApp";
 import ReadmeViewerApp from "@/components/apps/ReadmeViewerApp";
+import { AIAgentDrawer } from "@/components/agent/AIAgentDrawer";
 
 import { REPOSITORY_TREE, getAllFiles, FileNode } from "@/lib/decompiler/repositoryData";
 
@@ -26,12 +27,27 @@ export default function MacOSStudio() {
   const [activeTab, setActiveTab] = useState<string>("decompiler");
   const [theme, setTheme] = useState<"dark" | "light">("light"); // Light Mode by default
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isAgentOpen, setIsAgentOpen] = useState(false);
 
   const isDark = theme === "dark";
 
   const toggleTheme = () => {
     setTheme(isDark ? "light" : "dark");
   };
+
+  // Global keyboard shortcut for Cmd+K / Ctrl+K
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsAgentOpen((prev) => !prev);
+      } else if (e.key === "Escape" && isAgentOpen) {
+        setIsAgentOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isAgentOpen]);
 
   const getWindowTitle = () => {
     switch (activeTab) {
@@ -79,6 +95,8 @@ export default function MacOSStudio() {
         onSelectTab={setActiveTab}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onToggleAgent={() => setIsAgentOpen((prev) => !prev)}
+        isAgentOpen={isAgentOpen}
       />
 
       {/* Main macOS Studio Window Container */}
@@ -206,10 +224,35 @@ export default function MacOSStudio() {
       </main>
 
       {/* Floating macOS Glassmorphic Dock */}
-      <MacDock activeTab={activeTab} onSelectTab={setActiveTab} theme={theme} />
+      <MacDock
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        theme={theme}
+        onToggleAgent={() => setIsAgentOpen((prev) => !prev)}
+        isAgentOpen={isAgentOpen}
+      />
 
       {/* Floating Bottom-Right 100xprompt Branding Watermark */}
       <BrandWatermark theme={theme} />
+
+      {/* Slide-out AI Agent Drawer */}
+      <AIAgentDrawer
+        isOpen={isAgentOpen}
+        onClose={() => setIsAgentOpen(false)}
+        isDark={isDark}
+        activeFile={{
+          path: selectedNode.path,
+          subsystem: selectedNode.category,
+          description: selectedNode.oneLineSummary,
+        }}
+        onOpenFile={(path) => {
+          const target = allFiles.find((f) => f.path === path || f.name === path);
+          if (target) {
+            setSelectedNode(target);
+            setActiveTab("decompiler");
+          }
+        }}
+      />
     </div>
   );
 }

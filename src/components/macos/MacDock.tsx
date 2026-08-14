@@ -8,15 +8,24 @@ import {
   Terminal,
   FileText,
   Layers,
+  Sparkles,
 } from "lucide-react";
 
 interface DockProps {
   activeTab: string;
   onSelectTab: (tab: string) => void;
   theme?: "dark" | "light";
+  onToggleAgent?: () => void;
+  isAgentOpen?: boolean;
 }
 
-export default function MacDock({ activeTab, onSelectTab, theme = "light" }: DockProps) {
+export default function MacDock({
+  activeTab,
+  onSelectTab,
+  theme = "light",
+  onToggleAgent,
+  isAgentOpen = false,
+}: DockProps) {
   const [hoveredApp, setHoveredApp] = useState<string | null>(null);
   const isDark = theme === "dark";
 
@@ -63,6 +72,14 @@ export default function MacDock({ activeTab, onSelectTab, theme = "light" }: Doc
       color: "from-cyan-500 to-blue-600",
       icon: <FileText className="h-6 w-6 text-white" />,
     },
+    {
+      id: "agent",
+      name: "AI Copilot (⌘K)",
+      badge: "Gemini 3.7",
+      color: "from-indigo-600 via-purple-600 to-cyan-500",
+      icon: <Sparkles className="h-6 w-6 text-white animate-pulse" />,
+      isAction: true,
+    },
   ];
 
   return (
@@ -75,7 +92,7 @@ export default function MacDock({ activeTab, onSelectTab, theme = "light" }: Doc
         }`}
       >
         {apps.map((app) => {
-          const isActive = activeTab === app.id;
+          const isActive = app.id === "agent" ? isAgentOpen : activeTab === app.id;
           const isHovered = hoveredApp === app.id;
 
           return (
@@ -84,7 +101,13 @@ export default function MacDock({ activeTab, onSelectTab, theme = "light" }: Doc
               className="relative flex flex-col items-center group cursor-pointer"
               onMouseEnter={() => setHoveredApp(app.id)}
               onMouseLeave={() => setHoveredApp(null)}
-              onClick={() => onSelectTab(app.id)}
+              onClick={() => {
+                if (app.id === "agent") {
+                  onToggleAgent?.();
+                } else {
+                  onSelectTab(app.id);
+                }
+              }}
             >
               {/* Tooltip on Hover */}
               {isHovered && (

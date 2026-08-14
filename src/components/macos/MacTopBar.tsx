@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Sun,
   Moon,
+  Sparkles,
 } from "lucide-react";
 
 interface TopBarProps {
@@ -15,6 +16,8 @@ interface TopBarProps {
   onSelectTab: (tab: string) => void;
   theme: "dark" | "light";
   onToggleTheme: () => void;
+  onToggleAgent?: () => void;
+  isAgentOpen?: boolean;
 }
 
 export default function MacTopBar({
@@ -22,6 +25,8 @@ export default function MacTopBar({
   onSelectTab,
   theme,
   onToggleTheme,
+  onToggleAgent,
+  isAgentOpen = false,
 }: TopBarProps) {
   const [timeStr, setTimeStr] = useState<string>("12:00 PM");
   const [mounted, setMounted] = useState(false);
@@ -120,7 +125,24 @@ export default function MacTopBar({
       </div>
 
       {/* Right System Tray Icons */}
-      <div className="flex items-center gap-3 text-xs font-mono">
+      <div className="flex items-center gap-2.5 text-xs font-mono">
+        {/* AI Agent Trigger Button */}
+        <button
+          onClick={onToggleAgent}
+          className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-sans font-semibold transition-all cursor-pointer shadow-sm ${
+            isAgentOpen
+              ? "bg-indigo-600 border-indigo-400 text-white shadow-indigo-500/20"
+              : isDark
+              ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20"
+              : "border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+          }`}
+          title="X-OS AI Copilot (⌘K)"
+        >
+          <Sparkles className={`h-3 w-3 ${isAgentOpen ? "text-amber-300" : "text-indigo-400"} animate-pulse`} />
+          <span className="hidden sm:inline">Ask AI</span>
+          <span className="text-[9px] opacity-70 font-mono px-1 rounded bg-black/20">⌘K</span>
+        </button>
+
         {/* Dark / Light Mode Switcher */}
         <button
           onClick={onToggleTheme}
