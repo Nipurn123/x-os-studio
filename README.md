@@ -12,12 +12,12 @@
 </p>
 
 <h1 align="center">
-  ⚡ X-OS Studio - The Open-Source X (Twitter) Algorithm Visualizer & Decompiler
+  ⚡ X-OS Studio - Crack the X (Twitter) Algorithm & Go Viral: The Complete Open-Source Recommendation Engine Decompiler, 40x Multiplier Matrix & Tweet Doctor AI
 </h1>
 
 <p align="center">
-  <b>Crack the algorithm. Maximize your reach. Go viral on X.</b><br/>
-  An interactive, macOS Sonoma-grade developer studio deconstructing all <b>2,015+ source files</b>, candidate funnels, transformer models, and ranking heuristics of the <b>X "For You" Feed Recommendation Algorithm</b>.
+  <b>Decompile 2,015+ source files. Master the 5-stage candidate funnel (500M to 20 in &lt;100ms). Unlock +20x multipliers, eliminate reach penalties, and engineer viral distribution on X.</b><br/>
+  An interactive, macOS Sonoma-grade developer studio deconstructing all candidate funnels, transformer models, and ranking heuristics of the <b>X "For You" Feed Recommendation Algorithm</b>.
 </p>
 
 <p align="center">
