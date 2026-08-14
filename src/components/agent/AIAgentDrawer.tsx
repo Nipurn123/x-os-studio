@@ -220,25 +220,36 @@ export function AIAgentDrawer({
 
   if (!isOpen) return null;
 
-  // Sizing matrix for responsive elegance
+  // Responsive Styles: Mobile (<640px) uses true iOS Bottom Sheet (top-8 inset-x-0 bottom-0)
   const getContainerStyles = () => {
     if (viewMode === "fullscreen") {
-      return "fixed inset-3 sm:inset-5 z-50 rounded-3xl";
+      return "fixed inset-1 sm:inset-4 z-50 rounded-2xl sm:rounded-3xl";
     }
     if (viewMode === "wide") {
-      return "fixed top-8 bottom-16 right-3 sm:right-6 w-[860px] max-w-[95vw] z-50 rounded-2xl";
+      return "fixed top-8 bottom-16 right-2 sm:right-6 w-[860px] max-w-[96vw] z-50 rounded-2xl";
     }
-    // compact default
-    return "fixed top-8 bottom-16 right-3 sm:right-6 w-[450px] max-w-[95vw] z-50 rounded-2xl";
+    // Compact Mode: On mobile, full-width bottom sheet; on desktop, sleek side floating drawer
+    return "fixed inset-x-0 sm:inset-x-auto sm:right-6 bottom-0 sm:bottom-16 top-10 sm:top-8 w-full sm:w-[450px] z-50 rounded-t-3xl sm:rounded-2xl";
   };
 
   return (
     <>
-      {/* Dimmed backdrop when in Fullscreen Mode */}
+      {/* Dimmed backdrop when in Mobile Sheet or Fullscreen Mode */}
+      <div
+        onClick={() => {
+          if (viewMode === "fullscreen") {
+            setViewMode("compact");
+          } else {
+            onClose();
+          }
+        }}
+        className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 transition-opacity animate-in fade-in sm:hidden"
+      />
+
       {viewMode === "fullscreen" && (
         <div
           onClick={() => setViewMode("compact")}
-          className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 transition-opacity animate-in fade-in"
+          className="hidden sm:block fixed inset-0 bg-black/60 backdrop-blur-md z-40 transition-opacity animate-in fade-in"
         />
       )}
 
@@ -249,16 +260,21 @@ export function AIAgentDrawer({
             : "bg-[#fcfcfe]/95 border border-slate-300 text-slate-900 shadow-[0_25px_80px_rgba(0,0,0,0.18)] ring-1 ring-black/5"
         } backdrop-blur-3xl overflow-hidden`}
       >
+        {/* iOS Native Drag Handle on Mobile */}
+        <div className="flex sm:hidden items-center justify-center pt-2 pb-1">
+          <div className="w-10 h-1 rounded-full bg-slate-400/40 dark:bg-white/20" />
+        </div>
+
         {/* Apple Native Minimal Titlebar */}
         <div
-          className={`flex items-center justify-between px-3.5 py-2.5 border-b select-none shrink-0 ${
+          className={`flex items-center justify-between px-3.5 py-2 sm:py-2.5 border-b select-none shrink-0 ${
             isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200/90 bg-slate-50/80"
           }`}
         >
           {/* Left: Traffic Lights & Minimal Label */}
           <div className="flex items-center space-x-2.5">
-            {/* Traffic Lights */}
-            <div className="flex items-center space-x-2 mr-0.5">
+            {/* Traffic Lights on Desktop */}
+            <div className="hidden sm:flex items-center space-x-2 mr-0.5">
               <button
                 onClick={onClose}
                 title="Close (Esc)"
@@ -289,14 +305,14 @@ export function AIAgentDrawer({
               </div>
             </div>
 
-            <span className="text-xs font-bold tracking-tight">Intelligence</span>
+            <span className="text-xs font-bold tracking-tight">Intelligence Copilot</span>
           </div>
 
           {/* Right: Apple Segmented Pill & Trash */}
           <div className="flex items-center space-x-1.5">
-            {/* Apple Segmented View Control */}
+            {/* Apple Segmented View Control on Tablet / Desktop */}
             <div
-              className={`flex items-center p-0.5 rounded-lg border text-[10px] font-medium ${
+              className={`hidden sm:flex items-center p-0.5 rounded-lg border text-[10px] font-medium ${
                 isDark ? "bg-black/50 border-white/10" : "bg-slate-200/80 border-slate-300"
               }`}
             >
@@ -341,12 +357,23 @@ export function AIAgentDrawer({
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
+
+            {/* Mobile Close Button */}
+            <button
+              onClick={onClose}
+              title="Close Drawer"
+              className={`flex sm:hidden p-1.5 rounded-lg transition-colors cursor-pointer ${
+                isDark ? "hover:bg-white/10 text-slate-400 hover:text-white" : "hover:bg-slate-200 text-slate-600 hover:text-black"
+              }`}
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
         {/* Message Stream */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs select-text overflow-x-hidden">
-          <div className={`${viewMode === "fullscreen" ? "max-w-4xl mx-auto space-y-4" : "space-y-3.5"}`}>
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 text-xs select-text overflow-x-hidden">
+          <div className={`${viewMode === "fullscreen" ? "max-w-4xl mx-auto space-y-4" : "space-y-3"}`}>
             {messages.map((msg) => {
               const isUser = msg.role === "user";
               return (
@@ -368,10 +395,10 @@ export function AIAgentDrawer({
                   <div
                     className={`relative group w-full ${
                       isUser
-                        ? "max-w-[85%] sm:max-w-[70%] bg-[#007AFF] text-white self-end ml-auto rounded-2xl px-4 py-2.5 shadow-sm"
+                        ? "max-w-[88%] sm:max-w-[70%] bg-[#007AFF] text-white self-end ml-auto rounded-2xl px-3.5 py-2.5 shadow-sm"
                         : viewMode === "fullscreen"
                         ? "max-w-full rounded-2xl px-5 py-4 shadow-sm"
-                        : "max-w-[96%] rounded-2xl px-4 py-3 shadow-sm"
+                        : "max-w-[98%] sm:max-w-[96%] rounded-2xl px-3.5 py-2.5 shadow-sm"
                     } ${
                       !isUser &&
                       (isDark
@@ -381,7 +408,7 @@ export function AIAgentDrawer({
                   >
                     {/* Formatted Markdown */}
                     {isUser ? (
-                      <div className="whitespace-pre-wrap font-medium break-words leading-relaxed text-sm">
+                      <div className="whitespace-pre-wrap font-medium break-words leading-relaxed text-xs sm:text-sm">
                         {msg.content}
                       </div>
                     ) : msg.content ? (
@@ -444,9 +471,9 @@ export function AIAgentDrawer({
           </div>
         </div>
 
-        {/* Inset Search Composer */}
+        {/* Inset Search Composer (with bottom safe-area on mobile iOS) */}
         <div
-          className={`p-2.5 sm:p-3.5 border-t shrink-0 ${
+          className={`p-2.5 sm:p-3.5 border-t shrink-0 pb-safe ${
             isDark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white"
           }`}
         >
@@ -462,9 +489,9 @@ export function AIAgentDrawer({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask any architectural question about the X algorithm..."
+              placeholder="Ask any question about the algorithm..."
               disabled={isLoading}
-              className={`flex-1 px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all ${
+              className={`flex-1 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl text-xs outline-none transition-all ${
                 isDark
                   ? "bg-black/50 border border-white/15 text-white placeholder-slate-500 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50"
                   : "bg-slate-100 border border-slate-300 text-slate-900 placeholder-slate-400 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/50"
@@ -473,7 +500,7 @@ export function AIAgentDrawer({
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="p-2.5 rounded-xl bg-[#007AFF] hover:bg-[#0066d6] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-500/20 flex-shrink-0 cursor-pointer active:scale-95"
+              className="p-2 sm:p-2.5 rounded-xl bg-[#007AFF] hover:bg-[#0066d6] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-500/20 flex-shrink-0 cursor-pointer active:scale-95"
             >
               <Send className="w-3.5 h-3.5" />
             </button>

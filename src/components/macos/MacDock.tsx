@@ -32,63 +32,63 @@ export default function MacDock({
   const apps = [
     {
       id: "decompiler",
-      name: "Finder Decompiler",
+      name: "Finder",
       badge: "2,015 Files",
       color: "from-blue-500 to-indigo-600",
-      icon: <FolderCode className="h-6 w-6 text-white" />,
+      icon: <FolderCode className="h-5 w-5 sm:h-6 sm:w-6 text-white" />,
     },
     {
       id: "diagrams",
-      name: "Architecture Diagrams",
-      badge: "4 Visual Flows",
+      name: "Architecture",
+      badge: "4 Flows",
       color: "from-purple-500 to-pink-600",
-      icon: <Layers className="h-6 w-6 text-white" />,
+      icon: <Layers className="h-5 w-5 sm:h-6 sm:w-6 text-white" />,
     },
     {
       id: "doctor",
-      name: "Tweet Growth Doctor",
-      badge: "Live Scorer",
+      name: "Tweet Doctor",
+      badge: "Auditor",
       color: "from-amber-400 to-orange-500",
-      icon: <Zap className="h-6 w-6 text-white" />,
+      icon: <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-white" />,
     },
     {
       id: "matrix",
       name: "Weights Matrix",
       badge: "Cheat Sheet",
       color: "from-emerald-400 to-teal-600",
-      icon: <Cpu className="h-6 w-6 text-white" />,
+      icon: <Cpu className="h-5 w-5 sm:h-6 sm:w-6 text-white" />,
     },
     {
       id: "terminal",
-      name: "Terminal CLI",
-      badge: "zsh shell",
+      name: "Terminal",
+      badge: "CLI",
       color: "from-slate-700 to-slate-900",
-      icon: <Terminal className="h-6 w-6 text-white" />,
+      icon: <Terminal className="h-5 w-5 sm:h-6 sm:w-6 text-white" />,
     },
     {
       id: "readme",
-      name: "Architecture README",
-      badge: "Whitepaper",
+      name: "Whitepaper",
+      badge: "Docs",
       color: "from-cyan-500 to-blue-600",
-      icon: <FileText className="h-6 w-6 text-white" />,
+      icon: <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-white" />,
     },
     {
       id: "agent",
-      name: "AI Copilot (⌘K)",
-      badge: "AI",
+      name: "AI Copilot",
+      badge: "Intelligence",
       color: "from-indigo-600 via-purple-600 to-cyan-500",
-      icon: <Sparkles className="h-6 w-6 text-white animate-pulse" />,
+      icon: <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-white animate-pulse" />,
       isAction: true,
     },
   ];
 
   return (
-    <div className="relative z-40 flex items-center justify-center select-none pb-3">
+    <div className="fixed bottom-1 sm:bottom-2 inset-x-0 z-40 flex items-center justify-center select-none px-2 pointer-events-none">
       <div
-        className={`flex items-end gap-3 rounded-2xl px-4 py-2.5 backdrop-blur-2xl shadow-2xl transition-colors ${
+        className={`pointer-events-auto flex items-end gap-1.5 sm:gap-2.5 rounded-2xl px-2.5 sm:px-3.5 py-1.5 sm:py-2 backdrop-blur-2xl shadow-2xl transition-all max-w-[98vw] overflow-x-auto no-scrollbar ${
           isDark
-            ? "border border-white/[0.15] bg-black/40"
-            : "border border-black/[0.1] bg-white/70 shadow-lg"
+            ? "border border-white/[0.15] bg-black/60 shadow-black/80"
+            : "border border-black/[0.1] bg-white/80 shadow-slate-400/20"
         }`}
       >
         {apps.map((app) => {
@@ -98,7 +98,7 @@ export default function MacDock({
           return (
             <div
               key={app.id}
-              className="relative flex flex-col items-center group cursor-pointer"
+              className="relative flex flex-col items-center group cursor-pointer shrink-0"
               onMouseEnter={() => setHoveredApp(app.id)}
               onMouseLeave={() => setHoveredApp(null)}
               onClick={() => {
@@ -109,33 +109,31 @@ export default function MacDock({
                 }
               }}
             >
-              {/* Tooltip on Hover */}
+              {/* Tooltip on Desktop Hover */}
               {isHovered && (
-                <div className="absolute -top-10 flex flex-col items-center animate-in fade-in zoom-in-95 duration-150">
+                <div className="hidden sm:flex absolute -top-10 flex-col items-center animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
                   <div
-                    className={`rounded-md px-2 py-0.5 text-[11px] font-sans font-semibold shadow-lg backdrop-blur-md whitespace-nowrap ${
+                    className={`rounded-md px-2 py-0.5 text-[10px] font-sans font-semibold shadow-lg backdrop-blur-md whitespace-nowrap ${
                       isDark
-                        ? "border border-white/10 bg-black/80 text-white"
-                        : "border border-black/10 bg-white/90 text-black shadow-md"
+                        ? "border border-white/10 bg-black/90 text-white"
+                        : "border border-black/10 bg-white/95 text-black shadow-md"
                     }`}
                   >
                     {app.name}
                   </div>
                   <div
                     className={`h-1 w-1 rotate-45 border-r border-b ${
-                      isDark
-                        ? "bg-black/80 border-white/10"
-                        : "bg-white/90 border-black/10"
+                      isDark ? "bg-black/90 border-white/10" : "bg-white/95 border-black/10"
                     }`}
                   />
                 </div>
               )}
 
-              {/* App Icon Tile */}
+              {/* Touch & Click App Icon Tile */}
               <div
-                className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${
+                className={`flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-gradient-to-br ${
                   app.color
-                } shadow-md transition-all duration-200 group-hover:scale-120 group-hover:-translate-y-2 group-active:scale-95 border border-white/20`}
+                } shadow-sm transition-all duration-200 group-hover:scale-115 group-hover:-translate-y-1.5 group-active:scale-90 border border-white/20`}
               >
                 {app.icon}
               </div>
@@ -145,7 +143,7 @@ export default function MacDock({
                 {isActive && (
                   <div
                     className={`h-1 w-1 rounded-full scale-125 ${
-                      isDark ? "bg-white shadow-glow-blue" : "bg-black"
+                      isDark ? "bg-white shadow-glow-blue" : "bg-indigo-600"
                     }`}
                   />
                 )}

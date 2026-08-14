@@ -1,116 +1,62 @@
 # Technical Specification (SPEC)
 
-## Project: Gemini 3.7 Flash AI Agent Assistant for X-OS Studio
+## Project: X-OS Studio Mobile Responsive Architecture
 
 **Status**: Approved / Ready for Implementation  
 **Version**: 1.0.0  
 **Date**: August 14, 2026  
-**Architecture**: Next.js 15 Edge/Node API Routes, Server-Sent Streaming, Gemini 3.7 Flash Integration, macOS Sonoma Obsidian Glass UI  
+**Architecture**: Responsive Breakpoints (Mobile `< 640px`, Tablet `< 1024px`, Desktop `≥ 1024px`), Dynamic Viewport Units (`100dvh`), iOS Bottom Sheet Modal Architecture  
 
 ---
 
-## 1. System Architecture & Topology
+## 1. Viewport & Layout Architecture
 
 ```
-+-------------------------------------------------------------+
-|                 X-OS Studio (Frontend)                      |
-|                                                             |
-|  +---------------------+        +------------------------+  |
-|  |   MacTopBar / Dock  | -----> |   AIAgentDrawer.tsx    |  |
-|  | (Trigger / Cmd+K)   |        |  (Obsidian Glass UI)   |  |
-|  +---------------------+        +-----------+------------+  |
-+---------------------------------------------|---------------+
-                                              | POST /api/agent/chat
-                                              v (streaming chunks)
-+-------------------------------------------------------------+
-|               Next.js Backend API Route                     |
-|                                                             |
-|  +-------------------------------------------------------+  |
-|  | /api/agent/chat (Edge / Node Streaming Runtime)       |  |
-|  | - Injects X System Prompt & Production Weights        |  |
-|  | - Injects Subsystem Summaries & Active File Context   |  |
-|  | - Calls Google Gemini 3.7 Flash REST API              |  |
-|  | - Falls back gracefully to expert offline synthesizer |  |
-|  +-------------------------------------------------------+  |
-+-------------------------------------------------------------+
++-----------------------------------------------------------+
+| MacTopBar (h-8/h-7) - Clean Minimal Status + Ask AI       |
++-----------------------------------------------------------+
+| Main Window Container (flex-1, p-1 sm:p-3, h-[100dvh])    |
+|                                                           |
+|  [Desktop ≥ 1024px]: 3-Column Studio Grid                 |
+|  (Sidebar Tree | Code Canvas | Inspector Translation)     |
+|                                                           |
+|  [Mobile < 1024px]: Segmented View Mode                   |
+|  +-----------------------------------------------------+  |
+|  | [ 📁 Files ]  [ 💻 Source Code ]  [ 🧠 Meaning ]    |  |
+|  +-----------------------------------------------------+  |
+|  | Shows Active Selected View with Full Touch Scrolling|  |
+|                                                           |
++-----------------------------------------------------------+
+| MacDock (Mobile Touch Bar: compact icons + touch-scroll)  |
++-----------------------------------------------------------+
+| AIAgentDrawer (Desktop: Right Drawer | Mobile: iOS Sheet) |
++-----------------------------------------------------------+
 ```
 
 ---
 
-## 2. API Contract & Schemas
+## 2. Component Modification Matrix
 
-### Route: `POST /api/agent/chat`
-
-**Request Payload:**
-```typescript
-interface AgentChatRequest {
-  messages: Array<{
-    role: "user" | "assistant" | "system";
-    content: string;
-  }>;
-  activeFile?: {
-    path: string;
-    description?: string;
-    subsystem?: string;
-  };
-  temperature?: number;
-}
-```
-
-**Response Format:**
-- Content-Type: `text/event-stream` / `text/plain; charset=utf-8`
-- Real-time token streaming with SSE or raw chunked transfer encoding.
+1. **`src/app/layout.tsx` & `src/app/page.tsx`**:
+   - Change main wrapper to `h-[100dvh]` with `p-1 sm:p-3 pb-16 sm:pb-20`.
+   - Add mobile segmented sub-tab state for the Decompiler (`mobileDecompilerTab`: `"tree"` | `"code"` | `"inspect"`).
+2. **`src/components/macos/MacTopBar.tsx`**:
+   - Streamline mobile layout: compact padding, concise logo, right-aligned Ask AI and theme toggle.
+3. **`src/components/macos/MacDock.tsx`**:
+   - `overflow-x-auto no-scrollbar` on container.
+   - Scale dock icons from `h-10 w-10 sm:h-12 sm:w-12` with touch-friendly active states.
+4. **`src/components/agent/AIAgentDrawer.tsx`**:
+   - Responsive styling: on mobile (`< 640px`), render as an iOS Bottom Sheet (`inset-x-0 bottom-0 top-10 rounded-t-3xl border-t`).
+   - Add native drag handle pill on mobile header.
+5. **Apps (`TweetDoctorApp`, `AlgorithmMatrixApp`, `ArchitectureDiagramsApp`)**:
+   - Single-column stacked layouts on mobile with fluid touch containers.
+   - SVG diagrams wrapped in touch-scrollable horizontal containers with `min-w-[540px]`.
 
 ---
 
-## 3. System Prompt & Knowledge Ingestion
-
-The agent system prompt includes:
-1. **Core Identity**: Senior X Recommendation Systems & Ranking Engineer at 100xprompt.
-2. **Mathematical Ranking Weights**:
-   - `ShareViaCopyLink`: `+20.0` (40x like boost)
-   - `BidirectionalFollowReplyBoost`: `+15.0` to `+20.0` (mutual reply multiplier)
-   - `ReplyWithAuthorEngagement`: `+5.0`
-   - `VideoRetention50Plus`: `+1.0`
-   - `Favorite`: `+0.5`
-   - `OpenRawLink`: `-80%` candidate retrieval penalty
-   - `ReportPost`: `-234.0` penalty (~468 likes destroyed)
-   - `MuteAuthor`: `-58.8` penalty
-3. **Subsystem Architecture Guide**:
-   - `phoenix/`: Two-tower retrieval + heavy ranking transformer
-   - `thunder/`: In-network in-memory cache for followed accounts
-   - `simclusters/`: Graph-based interest community clustering
-   - `visibility-filtering/`: Safety rules and content label drop/interstitial decisions
-   - `user-cred-v2/`: GraphJet-based account reputation and authority scoring
-4. **Interactive File Linking**: Format file references as clickable tags that trigger decompiler node navigation.
-
----
-
-## 4. UI Components & Interactions
-
-### 4.1 `src/components/agent/AIAgentDrawer.tsx`
-- Floating drawer anchored to right edge (`fixed right-4 top-12 bottom-16 z-50 w-96 sm:w-[440px]`).
-- Acrylic Obsidian Glass (`bg-[#0c101b]/90 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-2xl`).
-- Dynamic Light/Dark mode styling based on `isDark`.
-- Quick action pills:
-  - *"Why are outbound links downranked?"*
-  - *"Explain Phoenix Two-Tower ranking"*
-  - *"How does mutual follow boost work?"*
-  - *"Audit my tweet draft"*
-- Chat message bubble list with markdown formatting, syntax highlighting, and 1-click copy button.
-- Clean loading pulse and live typing cursor indicator.
-
-### 4.2 Integration Touchpoints
-- **TopBar (`src/components/macos/MacTopBar.tsx`)**: Glowing Siri/AI Agent button with live status indicator and shortcut badge (`⌘K`).
-- **Dock (`src/components/macos/MacDock.tsx`)**: Added dedicated AI Agent dock item with notification badge.
-- **Main View (`src/app/page.tsx`)**: Global keyboard shortcut listener (`Cmd+K` / `Ctrl+K`) and state management.
-
----
-
-## 5. Verification Plan
-1. Test `/api/agent/chat` endpoint with mock queries and algorithm-specific questions.
-2. Verify live streaming tokens in UI.
-3. Test quick action pills and dynamic active file context injection.
-4. Verify responsive drawer collapse, expand, and drag behaviors.
-5. Run full build (`bun run build`) and verify 0 type errors.
-6. Push update to GitHub and trigger Cloud Run redeploy to `x.100xprompt.com`.
+## 3. Verification Plan
+1. Test mobile viewport rendering using PinchTab / responsive devtools at 375px (iPhone), 414px, and 768px (iPad).
+2. Verify iOS Bottom Sheet expand, drag, and dismiss behaviors.
+3. Verify segmented Decompiler switcher on mobile screens.
+4. Run `bun run build` to ensure 0 type or compiler errors.
+5. Commit and redeploy to Google Cloud Run.
