@@ -9,7 +9,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "X-OS Studio - Interactive X (Twitter) Algorithm Decompiler & Visual Architecture",
-  description: "Explore all 2,015 files of the open-source X recommendation algorithm. Features interactive architecture diagrams, Phoenix neural scoring calculator, Tweet Doctor optimizer, and visual pipeline breakdown hosted at x.100xprompt.com.",
+  description: "Deconstruct all 2,015 files of the open-source X recommendation algorithm. Features interactive architecture diagrams, Phoenix neural scoring calculator, Tweet Doctor optimizer, and visual pipeline breakdown hosted at x.100xprompt.com.",
   keywords: [
     "X Algorithm",
     "Twitter Algorithm",
@@ -26,25 +26,17 @@ export const metadata: Metadata = {
   authors: [{ name: "100xprompt", url: "https://100xprompt.com" }],
   metadataBase: new URL("https://x.100xprompt.com"),
   openGraph: {
-    title: "X-OS Studio - Interactive X Algorithm Explorer & Visualizer",
-    description: "Deconstruct the open-source X recommendation algorithm with interactive macOS-grade tools, neural ranking simulators, and deep architecture breakdowns.",
+    title: "X-OS Studio — Interactive X (Twitter) Algorithm Decompiler & Architecture Suite",
+    description: "Crack the X recommendation algorithm: Decompile 2,015 files, test Phoenix neural ranker multipliers, and audit your tweets in real-time.",
     url: "https://x.100xprompt.com",
     siteName: "X-OS Studio by 100xprompt",
-    images: [
-      {
-        url: "https://x.100xprompt.com/images/100X_Prompt.svg",
-        width: 1200,
-        height: 630,
-        alt: "X-OS Studio by 100xprompt",
-      },
-    ],
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "X-OS Studio - Interactive X Algorithm Architecture & Decompiler",
-    description: "Reverse engineer the X recommendation algorithm with visual diagrams, engagement multiplier matrix, and Tweet Doctor AI optimizer.",
+    title: "X-OS Studio — Interactive X (Twitter) Algorithm Decompiler & Architecture Suite",
+    description: "Crack the X recommendation algorithm: Decompile 2,015 files, test Phoenix neural ranker multipliers, and audit your tweets in real-time.",
     creator: "@100xprompt",
   },
 };
