@@ -16,7 +16,7 @@
 </h1>
 
 <p align="center">
-  <b>Reverse-engineer, visualize, and optimize for the world's most powerful recommendation engine.</b><br/>
+  <b>Crack the algorithm. Maximize your reach. Go viral on X.</b><br/>
   An interactive, macOS Sonoma-grade developer studio deconstructing all <b>2,015+ source files</b>, candidate funnels, transformer models, and ranking heuristics of the <b>X "For You" Feed Recommendation Algorithm</b>.
 </p>
 
