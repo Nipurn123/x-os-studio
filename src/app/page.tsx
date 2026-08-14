@@ -9,6 +9,9 @@ import MacCodeViewer from "@/components/macos/MacCodeViewer";
 import MacInspectorCard from "@/components/macos/MacInspectorCard";
 import BrandWatermark from "@/components/macos/BrandWatermark";
 
+import { IOSStatusBar } from "@/components/ios/IOSStatusBar";
+import { IOSTabBar } from "@/components/ios/IOSTabBar";
+
 import ArchitectureDiagramsApp from "@/components/apps/ArchitectureDiagramsApp";
 import TweetDoctorApp from "@/components/apps/TweetDoctorApp";
 import AlgorithmMatrixApp from "@/components/apps/AlgorithmMatrixApp";
@@ -91,28 +94,38 @@ export default function MacOSStudio() {
         }`}
       />
 
-      {/* Top macOS Acrylic Menu Bar */}
-      <MacTopBar
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        onToggleAgent={() => setIsAgentOpen((prev) => !prev)}
-        isAgentOpen={isAgentOpen}
-      />
+      {/* 1. TOP BAR: Native macOS on Desktop (>=768px) vs. Native iOS Status Bar with Dynamic Island on Mobile (<768px) */}
+      <div className="hidden md:block">
+        <MacTopBar
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onToggleAgent={() => setIsAgentOpen((prev) => !prev)}
+          isAgentOpen={isAgentOpen}
+        />
+      </div>
+      <div className="block md:hidden">
+        <IOSStatusBar
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onToggleAgent={() => setIsAgentOpen((prev) => !prev)}
+          isAgentOpen={isAgentOpen}
+        />
+      </div>
 
-      {/* Main Studio Window Container */}
-      <main className="relative flex-1 p-1 sm:p-3 pb-16 sm:pb-20 overflow-hidden flex flex-col min-h-0">
+      {/* Main Studio Content Viewport */}
+      <main className="relative flex-1 p-1 sm:p-2.5 md:p-3 pb-1 md:pb-20 overflow-hidden flex flex-col min-h-0">
         <div
-          className={`flex-1 flex flex-col rounded-xl sm:rounded-2xl border shadow-xl overflow-hidden transition-all duration-200 min-h-0 ${
+          className={`flex-1 flex flex-col rounded-2xl md:rounded-2xl border shadow-xl overflow-hidden transition-all duration-200 min-h-0 ${
             isDark
-              ? "border-white/[0.12] bg-[#10131e]/80 backdrop-blur-2xl"
-              : "border-black/[0.1] bg-white/85 backdrop-blur-2xl shadow-slate-300/40"
+              ? "border-white/[0.12] bg-[#10131e]/90 backdrop-blur-2xl"
+              : "border-black/[0.1] bg-white/90 backdrop-blur-2xl shadow-slate-300/40"
           } ${isFullscreen ? "m-0 rounded-none border-none" : ""}`}
         >
-          {/* Window Title Bar */}
+          {/* Desktop Title Bar (Hidden on Mobile for full screen real estate) */}
           <div
-            className={`flex h-9 sm:h-10 items-center justify-between border-b px-2.5 sm:px-4 select-none shrink-0 ${
+            className={`hidden md:flex h-9 sm:h-10 items-center justify-between border-b px-2.5 sm:px-4 select-none shrink-0 ${
               isDark ? "border-white/[0.08] bg-black/40" : "border-black/[0.08] bg-white/70"
             }`}
           >
@@ -124,7 +137,7 @@ export default function MacOSStudio() {
                 onMaximize={() => setIsFullscreen(!isFullscreen)}
               />
               <span
-                className={`hidden md:inline font-mono text-[11px] font-semibold border-l pl-3 ${
+                className={`font-mono text-[11px] font-semibold border-l pl-3 ${
                   isDark ? "text-slate-500 border-white/10" : "text-slate-400 border-black/10"
                 }`}
               >
@@ -300,17 +313,28 @@ export default function MacOSStudio() {
         </div>
       </main>
 
-      {/* Floating macOS Glassmorphic Dock */}
-      <MacDock
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        theme={theme}
-        onToggleAgent={() => setIsAgentOpen((prev) => !prev)}
-        isAgentOpen={isAgentOpen}
-      />
+      {/* 2. BOTTOM NAVIGATION: Desktop macOS Floating Dock (>=768px) vs. Native iOS Tab Bar (<768px) */}
+      <div className="hidden md:block">
+        <MacDock
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          theme={theme}
+          onToggleAgent={() => setIsAgentOpen((prev) => !prev)}
+          isAgentOpen={isAgentOpen}
+        />
+      </div>
+      <div className="block md:hidden">
+        <IOSTabBar
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          theme={theme}
+          onToggleAgent={() => setIsAgentOpen((prev) => !prev)}
+          isAgentOpen={isAgentOpen}
+        />
+      </div>
 
-      {/* Floating Bottom-Right 100xprompt Branding Watermark (Hidden on very small screens to avoid dock overlap) */}
-      <div className="hidden sm:block">
+      {/* Floating Bottom-Right 100xprompt Branding Watermark (Desktop only) */}
+      <div className="hidden md:block">
         <BrandWatermark theme={theme} />
       </div>
 

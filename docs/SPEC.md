@@ -1,62 +1,58 @@
 # Technical Specification (SPEC)
 
-## Project: X-OS Studio Mobile Responsive Architecture
+## Project: Dynamic iOS Mobile System UI Implementation for X-OS Studio
 
 **Status**: Approved / Ready for Implementation  
 **Version**: 1.0.0  
 **Date**: August 14, 2026  
-**Architecture**: Responsive Breakpoints (Mobile `< 640px`, Tablet `< 1024px`, Desktop `≥ 1024px`), Dynamic Viewport Units (`100dvh`), iOS Bottom Sheet Modal Architecture  
+**Architecture**: Adaptive Platform Architecture (macOS Desktop `≥ 768px` vs. Native iOS 18 System Phone ` < 768px`), Dynamic Island & Status Bar, Native iOS Tab Bar  
 
 ---
 
-## 1. Viewport & Layout Architecture
+## 1. System Architecture
 
 ```
 +-----------------------------------------------------------+
-| MacTopBar (h-8/h-7) - Clean Minimal Status + Ask AI       |
+| [Desktop ≥ 768px]: macOS Sonoma Studio                    |
+| - MacTopBar Menu + Live System Stats                      |
+| - MacWindow Frame + Traffic Lights                        |
+| - 3-Column Studio Grid (Finder, Code, Inspector)          |
+| - Floating MacDock + Acrylic Theme                        |
 +-----------------------------------------------------------+
-| Main Window Container (flex-1, p-1 sm:p-3, h-[100dvh])    |
-|                                                           |
-|  [Desktop ≥ 1024px]: 3-Column Studio Grid                 |
-|  (Sidebar Tree | Code Canvas | Inspector Translation)     |
-|                                                           |
-|  [Mobile < 1024px]: Segmented View Mode                   |
-|  +-----------------------------------------------------+  |
-|  | [ 📁 Files ]  [ 💻 Source Code ]  [ 🧠 Meaning ]    |  |
-|  +-----------------------------------------------------+  |
-|  | Shows Active Selected View with Full Touch Scrolling|  |
-|                                                           |
-+-----------------------------------------------------------+
-| MacDock (Mobile Touch Bar: compact icons + touch-scroll)  |
-+-----------------------------------------------------------+
-| AIAgentDrawer (Desktop: Right Drawer | Mobile: iOS Sheet) |
+| [Mobile < 768px]: Dynamic iOS 18 Phone System             |
+| - IOSStatusBar (Time, Signal, Dynamic Island, Battery)    |
+| - Segmented Navigation Pill Header (Files | Code | Intel) |
+| - Native Full-Bleed Content Viewports                     |
+| - IOSTabBar (5 Native iOS Icons with Active Blue Tint)    |
+| - iOS Home Indicator Swipe Bar (Safe Area)                |
 +-----------------------------------------------------------+
 ```
 
 ---
 
-## 2. Component Modification Matrix
+## 2. Component Specifications
 
-1. **`src/app/layout.tsx` & `src/app/page.tsx`**:
-   - Change main wrapper to `h-[100dvh]` with `p-1 sm:p-3 pb-16 sm:pb-20`.
-   - Add mobile segmented sub-tab state for the Decompiler (`mobileDecompilerTab`: `"tree"` | `"code"` | `"inspect"`).
-2. **`src/components/macos/MacTopBar.tsx`**:
-   - Streamline mobile layout: compact padding, concise logo, right-aligned Ask AI and theme toggle.
-3. **`src/components/macos/MacDock.tsx`**:
-   - `overflow-x-auto no-scrollbar` on container.
-   - Scale dock icons from `h-10 w-10 sm:h-12 sm:w-12` with touch-friendly active states.
-4. **`src/components/agent/AIAgentDrawer.tsx`**:
-   - Responsive styling: on mobile (`< 640px`), render as an iOS Bottom Sheet (`inset-x-0 bottom-0 top-10 rounded-t-3xl border-t`).
-   - Add native drag handle pill on mobile header.
-5. **Apps (`TweetDoctorApp`, `AlgorithmMatrixApp`, `ArchitectureDiagramsApp`)**:
-   - Single-column stacked layouts on mobile with fluid touch containers.
-   - SVG diagrams wrapped in touch-scrollable horizontal containers with `min-w-[540px]`.
+### 2.1 `src/components/ios/IOSStatusBar.tsx`
+- Renders authentic iOS top bar:
+  - Left: Bold current time (e.g. `9:41`).
+  - Center: **Dynamic Island** with subtle pill shape (`bg-black text-white px-3 py-1 rounded-full text-[10px] flex items-center space-x-1.5`).
+  - Right: Cellular signal bars, 5G icon, WiFi, and percentage-based battery icon.
+- Interactive: Tapping the Dynamic Island expands to show active algorithm intelligence status.
+
+### 2.2 `src/components/ios/IOSTabBar.tsx`
+- Renders native iOS bottom navigation:
+  - `[ Decompiler | Diagrams | Tweet Doctor | Matrix | Copilot ]`
+  - Active color: Apple Blue (`#007AFF`).
+  - Bottom Home Bar: `w-32 h-1 bg-black/40 dark:bg-white/30 rounded-full mx-auto mt-2`.
+
+### 2.3 `src/app/page.tsx` Platform Router
+- Seamlessly renders `IOSStatusBar` and `IOSTabBar` when screen width $< 768\text{px}$, while preserving `MacTopBar` and `MacDock` for desktop screens.
 
 ---
 
 ## 3. Verification Plan
-1. Test mobile viewport rendering using PinchTab / responsive devtools at 375px (iPhone), 414px, and 768px (iPad).
-2. Verify iOS Bottom Sheet expand, drag, and dismiss behaviors.
-3. Verify segmented Decompiler switcher on mobile screens.
-4. Run `bun run build` to ensure 0 type or compiler errors.
-5. Commit and redeploy to Google Cloud Run.
+1. Test mobile layout on 375px / 390px / 430px mobile viewports.
+2. Verify smooth tab switching between all 5 iOS tabs and the Dynamic Island.
+3. Test dark/light mode toggle consistency across the iOS status and tab bars.
+4. Run `bun run build` to confirm 0 compilation errors.
+5. Push to GitHub and deploy to Cloud Run.
